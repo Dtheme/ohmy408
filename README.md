@@ -4,7 +4,7 @@
 
 ## 项目背景
 
-在学习计算机科学基础知识时，编写[CS-base](https://github.com/Dtheme/CS-base) 时。发现在手机端浏览这些包含大量LaTeX数学公式的Markdown文档时，体验很不友好，或者交互非常复杂，为了解决这些问题，我开发了这个iOS Markdown LaTeX阅读器。
+在学习计算机科学基础知识，编写[CS-base](https://github.com/Dtheme/CS-base) 时。发现在手机端浏览这些包含大量LaTeX数学公式的Markdown文档时，体验很不友好，或者交互非常复杂，为了解决这些问题，我开发了这个iOS Markdown LaTeX阅读器。
 
 ## 主要特性
 
