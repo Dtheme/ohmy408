@@ -1,17 +1,10 @@
 # ohmy408 - 专业的iOS Markdown阅读器
 
-> **移动端包含LaTeX markdown傻瓜式阅读器**
+> **移动端Markdown LaTeX傻瓜式阅读器**
 
 ## 项目背景
 
-在学习计算机科学基础知识时，我发现GitHub上有很多优质的学习资源，比如 [CS-base](https://github.com/Dtheme/CS-base) 仓库包含了丰富的408考研资料。但是在手机端浏览这些包含大量LaTeX数学公式的Markdown文档时，体验很不友好：
-
-- GitHub移动端LaTeX公式渲染效果差
-- 手机浏览器缩放操作繁琐
-- 网络环境不稳定时加载缓慢
-- 文件管理和导航不便
-
-为了解决这些问题，我开发了这个专业的iOS Markdown阅读器应用。
+在学习计算机科学基础知识时，编写[CS-base](https://github.com/Dtheme/CS-base) 时。发现在手机端浏览这些包含大量LaTeX数学公式的Markdown文档时，体验很不友好，或者交互非常复杂，为了解决这些问题，我开发了这个iOS Markdown LaTeX阅读器。
 
 ## 主要特性
 
