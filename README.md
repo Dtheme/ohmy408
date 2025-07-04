@@ -1,4 +1,4 @@
-# ohmy408 - 专业的iOS Markdown阅读器
+# ohmy408 -  文件管理器 & LaTeX阅读器
 
 > **移动端Markdown LaTeX傻瓜式阅读器**
 
