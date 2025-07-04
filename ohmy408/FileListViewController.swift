@@ -993,8 +993,8 @@ class FileListViewController: UIViewController {
                 // 根据文件来源智能处理
                 switch file.source {
                 case .bundle:
-                    // Bundle文件需要复制到临时目录
-                    fileURL = try self?.copyFileToTempDirectory(file: file) ?? file.url
+                    // Bundle文件需要复制到共享目录
+                    fileURL = try self?.copyFileToSharedDirectory(file: file) ?? file.url
                 case .documents:
                     // Documents文件可以直接使用
                     fileURL = file.url
@@ -1019,72 +1019,121 @@ class FileListViewController: UIViewController {
         }
     }
     
-    /// 复制文件到临时目录
-    private func copyFileToTempDirectory(file: MarkdownFile) throws -> URL {
-        // 创建临时目录
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("XMindShare")
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+    /// 复制文件到共享目录 - 确保外部应用可以访问
+    private func copyFileToSharedDirectory(file: MarkdownFile) throws -> URL {
+        // 使用文档目录的Inbox文件夹，这是iOS推荐的应用间文件共享位置
+        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let inboxDir = documentsDir.appendingPathComponent("Inbox")
         
-        // 复制文件到临时目录
-        let tempFileURL = tempDir.appendingPathComponent(file.displayName)
+        // 创建Inbox目录
+        try FileManager.default.createDirectory(at: inboxDir, withIntermediateDirectories: true)
         
-        // 如果临时文件已存在，先删除
-        if FileManager.default.fileExists(atPath: tempFileURL.path) {
-            try FileManager.default.removeItem(at: tempFileURL)
+        // 生成唯一的文件名
+        let timestamp = Int(Date().timeIntervalSince1970)
+        let fileName = "\(timestamp)_\(file.displayName)"
+        let sharedFileURL = inboxDir.appendingPathComponent(fileName)
+        
+        // 如果文件已存在，先删除
+        if FileManager.default.fileExists(atPath: sharedFileURL.path) {
+            try FileManager.default.removeItem(at: sharedFileURL)
         }
         
-        try FileManager.default.copyItem(at: file.url, to: tempFileURL)
+        try FileManager.default.copyItem(at: file.url, to: sharedFileURL)
         
-        print("✅ 文件已复制到临时目录: \(tempFileURL.path)")
-        return tempFileURL
+        // 设置文件属性，确保外部应用可以读取
+        let attributes = [FileAttributeKey.posixPermissions: 0o644]
+        try FileManager.default.setAttributes(attributes, ofItemAtPath: sharedFileURL.path)
+        
+        print("✅ 文件已复制到共享目录: \(sharedFileURL.path)")
+        return sharedFileURL
     }
     
 
     
     /// 使用文档交互控制器打开文件
     private func openFileWithDocumentController(_ fileURL: URL) {
-        // 首先尝试使用URL scheme直接打开
-        if tryOpenWithURLScheme(fileURL) {
+        // 首先尝试使用URL scheme（但不期望成功）
+        tryOpenWithURLScheme(fileURL)
+        
+        // 验证文件是否存在
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            showErrorToast("文件不存在：\(fileURL.path)")
             return
         }
         
-        // 如果URL scheme失败，尝试文档交互控制器
+        // 创建文档交互控制器
         let documentController = UIDocumentInteractionController(url: fileURL)
         documentController.delegate = self
+        documentController.name = fileURL.lastPathComponent
+        
+        // 设置MIME类型和UTI
         documentController.uti = "com.xmind.xmind"
         
-        // 尝试直接打开
-        DispatchQueue.main.async {
+        print("🔍 尝试使用文档交互控制器打开XMind文件")
+        print("  - 文件路径: \(fileURL.path)")
+        print("  - 文件大小: \(getFileSize(fileURL))")
+        print("  - UTI: \(documentController.uti ?? "未设置")")
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // 首先尝试直接打开（打开到XMind应用）
             if documentController.presentOpenInMenu(from: self.view.bounds, in: self.view, animated: true) {
                 print("✅ 成功调用文档交互控制器打开文件")
             } else {
-                print("⚠️ 文档交互控制器失败，降级到分享菜单")
-                // 如果无法直接打开，显示分享菜单
-                self.presentActivityViewController(with: fileURL)
+                print("⚠️ 文档交互控制器的打开菜单失败，尝试预览")
+                
+                // 如果打开菜单失败，尝试预览
+                if documentController.presentPreview(animated: true) {
+                    print("✅ 成功显示文档预览")
+                } else {
+                    print("⚠️ 文档预览也失败，降级到分享菜单")
+                    // 如果预览也失败，显示分享菜单
+                    self.presentActivityViewController(with: fileURL)
+                }
             }
         }
     }
     
+    /// 获取文件大小
+    private func getFileSize(_ url: URL) -> String {
+        do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+            if let size = attributes[FileAttributeKey.size] as? Int64 {
+                return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+            }
+        } catch {
+            print("❌ 获取文件大小失败: \(error)")
+        }
+        return "未知"
+    }
+    
     /// 尝试使用URL scheme打开文件
     private func tryOpenWithURLScheme(_ fileURL: URL) -> Bool {
+        // 注意：大多数iOS应用（包括XMind）不支持直接通过URL scheme打开文件
+        // 这里保留逻辑但会优先使用文档交互控制器
+        
         // 尝试多种XMind URL schemes
-        let schemes = ["xmind://", "com.xmind.zen://"]
+        let schemes = [
+            "xmind://",
+            "com.xmind.zen://",
+            "com.xmind.mindmap://"
+        ]
         
         for scheme in schemes {
             if let schemeURL = URL(string: scheme) {
                 if UIApplication.shared.canOpenURL(schemeURL) {
-                    // 构建带文件路径的URL
-                    let fileURLString = fileURL.absoluteString
-                    if let openURL = URL(string: "\(scheme)open?file=\(fileURLString)") {
-                        UIApplication.shared.open(openURL) { success in
-                            if success {
-                                print("✅ 成功使用URL scheme打开: \(scheme)")
-                            } else {
-                                print("❌ URL scheme打开失败: \(scheme)")
-                            }
+                    // 尝试直接打开XMind应用（不传递文件）
+                    // 用户需要手动导入文件
+                    UIApplication.shared.open(schemeURL) { success in
+                        if success {
+                            print("✅ 成功打开XMind应用: \(scheme)")
+                            print("ℹ️ 注意：文件已准备在共享目录，用户需要手动导入")
+                        } else {
+                            print("❌ 打开XMind应用失败: \(scheme)")
                         }
-                        return true
                     }
+                    return false // 返回false继续使用文档交互控制器
                 }
             }
         }
@@ -1105,7 +1154,7 @@ class FileListViewController: UIViewController {
     private func showXMindNotInstalledAlert(file: MarkdownFile) {
         let alert = UIAlertController(
             title: "XMind应用未安装",
-            message: "您的设备上未安装XMind应用。您可以：\n\n1. 前往App Store下载XMind\n2. 使用其他应用打开\n3. 使用应用内预览",
+            message: "检测到您的设备上未安装XMind应用。\n\n为了获得最佳的思维导图体验，建议您：\n\n1. 📱 前往App Store下载XMind\n2. 📤 使用其他应用打开\n3. 👀 使用应用内预览",
             preferredStyle: .alert
         )
         
@@ -1150,8 +1199,8 @@ class FileListViewController: UIViewController {
                 // 根据文件来源智能处理
                 switch file.source {
                 case .bundle:
-                    // Bundle文件需要复制到临时目录
-                    fileURL = try self?.copyFileToTempDirectory(file: file) ?? file.url
+                    // Bundle文件需要复制到共享目录
+                    fileURL = try self?.copyFileToSharedDirectory(file: file) ?? file.url
                 case .documents:
                     // Documents文件可以直接使用
                     fileURL = file.url

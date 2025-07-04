@@ -523,6 +523,79 @@ class XMindViewerViewController: UIViewController {
     @objc private func shareButtonTapped() {
         guard let file = xmindFile else { return }
         
+        // 显示分享选择菜单
+        let alertController = UIAlertController(
+            title: "分享XMind文件",
+            message: "选择分享方式",
+            preferredStyle: .actionSheet
+        )
+        
+        // 在XMind中打开
+        let openInXMindAction = UIAlertAction(title: "在XMind中打开", style: .default) { [weak self] _ in
+            self?.openInXMindApp()
+        }
+        openInXMindAction.setValue(UIImage(systemName: "brain.head.profile"), forKey: "image")
+        
+        // 分享到其他应用
+        let shareAction = UIAlertAction(title: "分享到其他应用", style: .default) { [weak self] _ in
+            self?.shareToOtherApps()
+        }
+        shareAction.setValue(UIImage(systemName: "square.and.arrow.up"), forKey: "image")
+        
+        // 取消
+        let cancelAction = UIAlertAction(title: "取消", style: .cancel)
+        
+        alertController.addAction(openInXMindAction)
+        alertController.addAction(shareAction)
+        alertController.addAction(cancelAction)
+        
+        // 设置iPad的popover
+        if let popover = alertController.popoverPresentationController {
+            popover.barButtonItem = navigationItem.rightBarButtonItem
+        }
+        
+        present(alertController, animated: true)
+    }
+    
+    /// 在XMind应用中打开
+    private func openInXMindApp() {
+        guard let file = xmindFile else { return }
+        
+        // 智能处理文件，确保外部应用能够访问
+        let loadingAlert = UIAlertController(title: "正在准备", message: "正在准备XMind文件...", preferredStyle: .alert)
+        present(loadingAlert, animated: true)
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            do {
+                let fileURL: URL
+                
+                switch file.source {
+                case .bundle:
+                    fileURL = try self?.copyFileToSharedDirectory(file: file) ?? file.url
+                case .documents:
+                    fileURL = file.url
+                }
+                
+                DispatchQueue.main.async {
+                    loadingAlert.dismiss(animated: true) {
+                        self?.openFileWithDocumentController(fileURL)
+                    }
+                }
+                
+            } catch {
+                DispatchQueue.main.async {
+                    loadingAlert.dismiss(animated: true) {
+                        self?.showErrorAlert("准备文件失败：\(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+    
+    /// 分享到其他应用
+    private func shareToOtherApps() {
+        guard let file = xmindFile else { return }
+        
         let activityController = UIActivityViewController(
             activityItems: [file.url],
             applicationActivities: nil
@@ -534,6 +607,50 @@ class XMindViewerViewController: UIViewController {
         }
         
         present(activityController, animated: true)
+    }
+    
+    /// 复制文件到共享目录
+    private func copyFileToSharedDirectory(file: MarkdownFile) throws -> URL {
+        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let inboxDir = documentsDir.appendingPathComponent("Inbox")
+        
+        try FileManager.default.createDirectory(at: inboxDir, withIntermediateDirectories: true)
+        
+        let timestamp = Int(Date().timeIntervalSince1970)
+        let fileName = "\(timestamp)_\(file.displayName)"
+        let sharedFileURL = inboxDir.appendingPathComponent(fileName)
+        
+        if FileManager.default.fileExists(atPath: sharedFileURL.path) {
+            try FileManager.default.removeItem(at: sharedFileURL)
+        }
+        
+        try FileManager.default.copyItem(at: file.url, to: sharedFileURL)
+        
+        let attributes = [FileAttributeKey.posixPermissions: 0o644]
+        try FileManager.default.setAttributes(attributes, ofItemAtPath: sharedFileURL.path)
+        
+        return sharedFileURL
+    }
+    
+    /// 使用文档交互控制器打开文件
+    private func openFileWithDocumentController(_ fileURL: URL) {
+        let documentController = UIDocumentInteractionController(url: fileURL)
+        documentController.delegate = self
+        documentController.name = fileURL.lastPathComponent
+        documentController.uti = "com.xmind.xmind"
+        
+        if documentController.presentOpenInMenu(from: view.bounds, in: view, animated: true) {
+            print("✅ 成功调用文档交互控制器")
+        } else {
+            showErrorAlert("无法打开XMind文件。请确保已安装XMind应用。")
+        }
+    }
+    
+    /// 显示错误提示
+    private func showErrorAlert(_ message: String) {
+        let alert = UIAlertController(title: "错误", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "确定", style: .default))
+        present(alert, animated: true)
     }
     
     @objc private func retryButtonTapped() {
@@ -624,6 +741,34 @@ enum XMindError: LocalizedError {
             return "解析XML文件失败"
         case .invalidFormat:
             return "不支持的XMind文件格式"
+        }
+    }
+}
+
+// MARK: - UIDocumentInteractionControllerDelegate
+extension XMindViewerViewController: UIDocumentInteractionControllerDelegate {
+    
+    func documentInteractionControllerViewControllerForPreview(_ controller: UIDocumentInteractionController) -> UIViewController {
+        return self
+    }
+    
+    func documentInteractionController(_ controller: UIDocumentInteractionController, didEndSendingToApplication application: String?) {
+        if let app = application {
+            print("✅ 文件已发送到应用: \(app)")
+            
+            let alert = UIAlertController(
+                title: "成功",
+                message: "XMind文件已成功发送到\(app)。",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "确定", style: .default))
+            present(alert, animated: true)
+        }
+    }
+    
+    func documentInteractionController(_ controller: UIDocumentInteractionController, willBeginSendingToApplication application: String?) {
+        if let app = application {
+            print("📤 正在发送文件到应用: \(app)")
         }
     }
 }

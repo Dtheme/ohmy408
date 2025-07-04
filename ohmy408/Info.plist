@@ -18,8 +18,21 @@
 				<string>net.daringfireball.markdown</string>
 				<string>public.plain-text</string>
 				<string>com.adobe.pdf</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>XMind Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
 				<string>com.xmind.xmind</string>
 			</array>
+			<key>LSTypeIsPackage</key>
+			<false/>
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
@@ -40,6 +53,8 @@
 	<array>
 		<string>xmind</string>
 		<string>com.xmind.zen</string>
+		<string>com.xmind.mindmap</string>
+		<string>xmind-2021</string>
 		<string>mindmeister</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
@@ -140,6 +155,7 @@
 			<array>
 				<string>public.data</string>
 				<string>public.archive</string>
+				<string>public.composite-content</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>XMind Document</string>
@@ -150,6 +166,11 @@
 				<key>public.filename-extension</key>
 				<array>
 					<string>xmind</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/vnd.xmind.workbook</string>
+					<string>application/x-xmind</string>
 				</array>
 			</dict>
 		</dict>
