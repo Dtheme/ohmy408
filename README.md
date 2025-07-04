@@ -1,131 +1,132 @@
-# Markdown阅读器应用
+# ohmy408 - 专业的iOS Markdown阅读器
 
-这是一个功能强大的iOS Markdown阅读器应用，支持Markdown和LaTeX公式的渲染显示。
+> **专为计算机科学学习者设计的移动端文档阅读器**
 
-## 功能特性
+## 项目背景
 
-### 📚 文件管理
-- **分组显示**: 自动按文件夹分组显示Markdown文件
-- **智能扫描**: 递归扫描应用Bundle和用户文档目录
-- **文件信息**: 显示文件大小、修改日期和位置信息
-- **iCloud同步**: 支持将文档同步到iCloud Drive
-- **文件导入**: 支持从文件系统导入txt、pdf和markdown文件
+在学习计算机科学基础知识时，我发现GitHub上有很多优质的学习资源，比如 [CS-base](https://github.com/Dtheme/CS-base) 仓库包含了丰富的408考研资料。但是在手机端浏览这些包含大量LaTeX数学公式的Markdown文档时，体验很不友好：
 
-### 🎨 渲染功能
-- **Markdown渲染**: 完整支持Markdown语法
-- **LaTeX公式**: 支持行内和块级数学公式
-- **流式渲染**: 逐行动画显示内容（可切换模式）
-- **即时渲染**: 一次性显示完整内容
+- GitHub移动端LaTeX公式渲染效果差
+- 手机浏览器缩放操作繁琐
+- 网络环境不稳定时加载缓慢
+- 文件管理和导航不便
 
-### 📖 阅读体验
-- **响应式设计**: 适配不同屏幕尺寸
-- **深色模式**: 自动适配系统主题
-- **分享功能**: 支持文件分享
-- **错误处理**: 友好的错误提示和重试机制
+为了解决这些问题，我开发了这个专业的iOS Markdown阅读器应用。
+
+## 主要特性
+
+### 完美的文档渲染
+- 基于MathJax 3.0引擎，完美渲染复杂数学公式
+- Markdown语法支持
+- 流式渲染（逐行动画）和即时渲染（一次性显示）
+- 自适应不同屏幕尺寸
+
+### 智能文件管理
+- 自动按学科分类（高等数学、数据结构、计算机组成原理等）
+- 快速搜索文件名和内容
+- 记录阅读历史，快速回到上次阅读位置
+- 显示文件大小、修改时间等详细信息
+
+### 云端同步功能
+- 支持同步文档到iCloud 
+- 在多个iOS设备间同步阅读进度
+- 支持离线查看已同步的文档
+
+### 多格式导入
+- Markdown文件
+- 文本文件
+- PDF文档
+- XMind文件
+ 
+## 技术实现
+
+### 核心技术栈
+- **开发语言**: Swift 5.0+
+- **支持平台**: iOS/iPad OS
+- **渲染引擎**: WKWebView + MathJax 3.0
 
 ## 项目结构
 
-### 核心组件
-
 ```
-MarkDownLatex/
-├── MarkdownFileManager.swift       # 文件管理器（单一职责：文件扫描和读取）
-├── CloudSyncManager.swift          # iCloud同步管理器（单一职责：iCloud同步功能）
-├── FileImportManager.swift         # 文件导入管理器（单一职责：文件导入功能）
-├── FileListViewController.swift    # 文件列表控制器（单一职责：显示文件列表）
-├── MarkdownReaderViewController.swift # 阅读器控制器（单一职责：渲染内容）
-├── SceneDelegate.swift             # 场景代理（配置应用启动）
-├── index.html                      # HTML渲染模板
-└── datas/                          # 数学资料文件夹
-    ├── 0基础知识补充.md
-    ├── 1函数与极限基础知识详解.md
-    └── 2导数基础知识详解.md
+ohmy408/
+├── 视图控制器
+│   ├── FileListViewController.swift     # 文件列表主界面
+│   ├── MarkdownReaderViewController.swift # Markdown阅读器
+│   ├── XMindViewerViewController.swift   # XMind查看器
+│   └── SubjectSelectionViewController.swift # 学科选择
+├── 管理器类
+│   ├── MarkdownFileManager.swift        # 文件管理
+│   ├── CloudSyncManager.swift           # iCloud同步
+│   ├── FileImportManager.swift          # 文件导入
+│   ├── RecentFileManager.swift          # 最近文件
+│   └── ToastManager.swift               # 消息提示
+├── 渲染模板
+│   ├── markdown_viewer.html             # Markdown渲染模板
+│   └── xmind_jsmind_viewer.html        # XMind渲染模板
+└── 内置资料
+    └── datas.bundle/                    # 示例学习资料
 ```
 
-### 设计原则
+## 快速开始
 
-本项目严格遵循**单一职责原则（SRP）**：
+### 安装要求
+- iOS 15.6+
+- Xcode 14.0+
+- Swift 5.0+
 
-1. **MarkdownFileManager**: 专门负责文件系统操作
-2. **CloudSyncManager**: 专门负责iCloud同步功能
-3. **FileImportManager**: 专门负责文件导入功能
-4. **FileListViewController**: 专门负责文件列表UI和交互
-5. **MarkdownReaderViewController**: 专门负责内容渲染和阅读体验
+### 构建步骤
+1. **克隆项目**
+   ```bash
+   git clone https://github.com/yourusername/ohmy408.git
+   cd ohmy408
+   ```
 
-## 使用方法
+2. **打开项目**
+   ```bash
+   open ohmy408.xcodeproj
+   ```
 
-### 1. 浏览文件
-- 启动应用后自动显示分组的文件列表
-- 点击右上角的按钮可以进行iCloud同步或文件导入
+3. **安装依赖**
+   - 项目使用Swift Package Manager自动管理依赖
+   - 首次构建时会自动下载依赖包
 
-### 2. iCloud同步
-- 点击右上角的云朵图标
-- 选择"同步到iCloud"将本地文档同步到iCloud Drive
-- 选择"查看状态"检查当前同步状态
+4. **运行应用**
+   - 选择目标设备或模拟器
+   - 点击Run按钮构建并运行
 
-### 3. 文件导入
-- 点击右上角的加号图标
-- 选择"从文件导入"打开文件选择器
-- 支持导入.md、.txt、.pdf格式的文件
-- PDF文件会自动提取文本并转换为Markdown格式
-- 文件按照以下优先级分组：
-  - 📊 数学资料 (datas文件夹)
-  - 📄 示例文件 (Bundle根目录)
-  - 📁 我的文档 (用户Documents目录)
+### 使用CS-base资料
+1. **下载CS-base仓库**
+   ```bash
+   git clone https://github.com/Dtheme/CS-base.git
+   ```
 
-### 2. 阅读文件
-- 点击任意文件进入阅读模式
-- 支持两种渲染模式：
-  - 🎬 流式渲染：逐行动画显示（默认）
-  - ⚡ 即时渲染：一次性显示全部内容
+2. **导入文档**
+   - 打开ohmy408应用
+   - 点击右上角的"+"按钮
+   - 选择"从文件导入"
+   - 选择CS-base仓库中的Markdown文件
 
-### 3. 切换渲染模式
-- 点击右上角的播放/文档图标切换渲染模式
-- 切换后会立即重新渲染当前内容
+3. **开始学习**
+   - 文档会自动按学科分类
+   - 点击任意文档开始阅读
 
-### 4. 分享文件
-- 点击右上角的分享按钮
-- 支持通过系统分享功能发送文件
+### 隐私安全
+- 你也可以作为你自己资料的阅读器，只与你自己的iCloud进行交互，数据不会上传到任何其他服务器
 
-## 技术特性
+## 贡献指南
 
-### LaTeX公式支持
-- 使用MathJax 3.0渲染引擎
-- 支持行内公式：`\\( E = mc^2 \\)`
-- 支持块级公式：`\\[ \\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi} \\]`
-- 支持化学公式、物理符号、矩阵等高级功能
+欢迎提交Issues和Pull Requests来改进这个项目！
 
-### Markdown语法支持
-- 标题、列表、表格
-- 代码块和语法高亮
-- 链接和图片
-- 引用和分割线
-- 粗体、斜体等文本格式
+## 许可证
 
-### 文件系统功能
-- 递归扫描子目录
-- 自动检测文件变更
-- 支持删除用户文档（保护内置文件）
-- 下拉刷新文件列表
+本项目基于MIT许可证开源。详见 [LICENSE](LICENSE) 文件。
 
-## 开发信息
+## 联系方式
 
-- **开发语言**: Swift 5.0+
-- **最低支持**: iOS 13.0+
-- **UI框架**: UIKit (程序化UI)
-- **渲染引擎**: WKWebView + MathJax 3.0
-- **架构模式**: MVC + 单一职责原则
+如有问题或建议，请通过以下方式联系：
 
-## 示例内容
+- 邮件：armchannel.dzw@gmail.com
+- Issues：[GitHub Issues](https://github.com/yourusername/ohmy408/issues)
+- 讨论：[GitHub Discussions](https://github.com/yourusername/ohmy408/discussions)
 
-应用内置了丰富的数学学习资料：
 
-1. **基础知识补充** - 数学基础概念和符号
-2. **函数与极限** - 详细的函数和极限理论
-3. **导数基础知识** - 导数的概念、计算和应用
-
-这些文件展示了应用对复杂LaTeX公式的完美支持能力。
-
----
-
-*本应用展示了如何构建一个功能完整、架构清晰的Markdown阅读器，适合学习iOS开发和软件架构设计。* 
