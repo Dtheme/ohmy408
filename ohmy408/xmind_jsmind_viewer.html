@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
+    <title>XMind 思维导图查看器</title>
+    
+    <!-- jsMind CSS (使用可靠的CDN) -->
+    <link type="text/css" rel="stylesheet" href="https://unpkg.com/jsmind@0.4.6/style/jsmind.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f4f4f4;
+            overflow: hidden;
+            /* 禁用WebView默认缩放但保留拖拽 */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            position: fixed;
+            width: 100%;
+        }
+        
+        #jsmind_container {
+            width: 100vw;
+            height: 100vh;
+            background-color: #ffffff;
+            position: relative;
+            /* 允许jsMind的拖拽和我们的缩放 */
+            touch-action: manipulation;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* 左上角工具栏样式 */
+        .toolbar {
+            position: fixed;
+            top: 30px;
+            left: 20px;
+            z-index: 1000;
+            display: none;
+            padding: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .toolbar.hidden {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+        }
+        
+        .toolbar.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        
+        /* 右下角缩放控制按钮 */
+        .zoom-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 20px;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            padding: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .zoom-controls.hidden {
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+        }
+        
+        .zoom-controls.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        
+        .zoom-btn {
+            width: 48px;
+            height: 48px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.95);
+            color: #007AFF;
+            font-size: 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            line-height: 1;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15), 
+                        0 1px 4px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        
+        .zoom-btn:hover {
+            background: rgba(255, 255, 255, 1);
+            color: #0056CC;
+            transform: scale(1.08);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 
+                        0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .zoom-btn:active {
+            transform: scale(0.92);
+            background: rgba(245, 245, 245, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* 按钮特殊样式 */
+        .zoom-btn:first-child {
+            /* 缩小按钮 */
+            font-size: 28px;
+            line-height: 0.8;
+        }
+        
+        .zoom-btn:last-child {
+            /* 放大按钮 */
+            font-size: 26px;
+            line-height: 0.9;
+        }
+        
+        /* 按钮禁用状态 */
+        .zoom-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .zoom-btn:disabled:hover {
+            transform: none !important;
+            background: rgba(255, 255, 255, 0.95);
+            color: #007AFF;
+        }
+        
+        /* iOS WebView 优化 */
+        @media (max-width: 768px) {
+            .toolbar {
+                top: 20px;
+                left: 15px;
+            }
+            
+            .toolbar button {
+                width: 52px;
+                height: 52px;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 
+                            0 2px 6px rgba(0, 0, 0, 0.15);
+            }
+            
+            .toggle-btn {
+                min-width: 52px !important;
+                padding: 0 18px !important;
+                font-size: 12px !important;
+            }
+            
+            .zoom-controls {
+                bottom: 40px;
+                right: 15px;
+                gap: 16px;
+            }
+            
+            .zoom-btn {
+                width: 52px;
+                height: 52px;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 
+                            0 2px 6px rgba(0, 0, 0, 0.15);
+            }
+            
+            .zoom-btn:first-child {
+                font-size: 32px;
+            }
+            
+            .zoom-btn:last-child {
+                font-size: 30px;
+            }
+        }
+        
+        /* 高分辨率屏幕优化 */
+        @media (-webkit-min-device-pixel-ratio: 2) {
+            .zoom-btn {
+                border-width: 0.5px;
+            }
+        }
+        
+        .toolbar button {
+            width: 48px;
+            height: 48px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.95);
+            color: #007AFF;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            line-height: 1;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15), 
+                        0 1px 4px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            white-space: nowrap;
+            padding: 0;
+        }
+        
+        .toolbar button:hover {
+            background: rgba(255, 255, 255, 1);
+            color: #0056CC;
+            transform: scale(1.08);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 
+                        0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .toolbar button:active {
+            transform: scale(0.92);
+            background: rgba(245, 245, 245, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* 展开按钮特殊样式 */
+        .toggle-btn {
+            width: auto !important;
+            min-width: 48px;
+            padding: 0 16px !important;
+            border-radius: 24px !important;
+            font-size: 13px !important;
+        }
+        
+        /* iOS WebView 中禁用所有按钮的提示文字 */
+        .toolbar button[title]:hover::after,
+        .zoom-btn[title]:hover::after {
+            display: none;
+        }
+        
+        /* 加载状态 */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 2000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007AFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: #666;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        /* 错误状态 */
+        .error {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 2000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            display: none;
+        }
+        
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .error-text {
+            color: #d32f2f;
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+        
+        .error button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #007AFF;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        /* jsMind 节点样式优化 */
+        jmnode {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            border-radius: 8px !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+            transition: all 0.2s ease !important;
+            border: 1px solid #e0e0e0 !important;
+        }
+        
+        jmnode:hover {
+            transform: scale(1.02) !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        /* 根节点特殊样式 */
+        jmnode[nodeid="root"] {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+            font-weight: bold !important;
+            font-size: 18px !important;
+            padding: 12px 20px !important;
+            border: none !important;
+        }
+        
+        /* 一级子节点样式 */
+        jmnode[depth="1"] {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+            color: white !important;
+            font-weight: 600 !important;
+        }
+        
+        /* 二级子节点样式 */
+        jmnode[depth="2"] {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important;
+            color: white !important;
+        }
+        
+        /* 连接线样式 */
+        svg path {
+            stroke-width: 2px !important;
+            stroke: #007AFF !important;
+            opacity: 0.8 !important;
+        }
+        
+        /* 手势提示 */
+        .gesture-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+        }
+        
+        .gesture-hint.show {
+            opacity: 1;
+        }
+        
+
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .gesture-hint {
+                bottom: 10px;
+                font-size: 12px;
+                padding: 8px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 加载指示器 -->
+    <div id="loading" class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在解析思维导图...</div>
+    </div>
+    
+    <!-- 错误提示 -->
+    <div id="error" class="error">
+        <div class="error-icon">⚠️</div>
+        <div class="error-text" id="error-message">加载失败</div>
+        <button onclick="retryLoad()">重试</button>
+    </div>
+    
+        <!-- 状态工具栏 -->
+    <div class="toolbar" id="toolbar" 
+         onmouseenter="cancelToolbarTimer()" 
+         onmouseleave="resetToolbarTimer()"
+         ontouchstart="cancelToolbarTimer()">
+        <button onclick="toggleExpandCollapse()" class="toggle-btn" title="切换展开状态" id="toggleBtn">全部展开</button>
+    </div>
+    
+    <!-- 缩放控制按钮 -->
+    <div class="zoom-controls" id="zoomControls" 
+         onmouseenter="cancelZoomControlsTimer()" 
+         onmouseleave="resetZoomControlsTimer()"
+         ontouchstart="cancelZoomControlsTimer()">
+        <button onclick="zoomOut()" class="zoom-btn" title="缩小 (10%)">−</button>
+        <button onclick="zoomIn()" class="zoom-btn" title="放大 (10%)">+</button>
+    </div>
+    
+    <!-- 手势提示 -->
+    <div class="gesture-hint" id="gestureHint">
+        拖拽移动 • 双击居中 • 点击节点选择
+    </div>
+    
+    <!-- 思维导图容器 -->
+    <div id="jsmind_container"></div>
+    
+    <!-- jsMind JavaScript (使用可靠的CDN) -->
+    <script src="https://unpkg.com/jsmind@0.4.6/js/jsmind.js"></script>
+    
+    <script>
+        let jm = null;
+        let mindMapData = null;
+        let isAllExpanded = false; // 默认为收起状态
+        let gestureHintTimer = null;
+        
+        // jsMind 配置选项
+        const jsMindOptions = {
+            container: 'jsmind_container',
+            theme: 'primary',
+            editable: false,
+            selectable: true,
+            view: {
+                hmargin: 40,
+                vmargin: 30,
+                line_width: 2,
+                line_color: '#007AFF',
+                draggable: true,
+                hide_scrollbars_when_dragging: true
+            },
+            layout: {
+                hspace: 30,
+                vspace: 20,
+                pspace: 13
+            },
+            shortcut: {
+                enable: true,
+                handles: {},
+                mapping: {
+                    toggle: 32,  // 空格键切换展开/收起
+                    left: 37,    // 左箭头
+                    up: 38,      // 上箭头  
+                    right: 39,   // 右箭头
+                    down: 40     // 下箭头
+                }
+            }
+        };
+        
+        // 主要加载函数 - 从iOS接收数据
+        function loadMindMap(data) {
+            try {
+                console.log('🎯 接收到思维导图数据:', data);
+                mindMapData = data;
+                
+                // 验证数据格式
+                if (!data || !data.data) {
+                    throw new Error('无效的思维导图数据格式');
+                }
+                
+                // 初始化 jsMind
+                jm = new jsMind(jsMindOptions);
+                
+                // 显示思维导图
+                jm.show(data);
+                
+                // 重置缩放级别
+                zoomConfig.currentZoom = 1.0;
+                
+                // 隐藏加载指示器，显示工具栏
+                hideLoading();
+                showToolbar();
+                
+                // 初始化按钮状态
+                setTimeout(() => {
+                    updateZoomButtonStates();
+                }, 100);
+                
+                // 延迟居中显示，确保渲染完成
+                setTimeout(() => {
+                    // 默认收起所有节点（除了根节点）
+                    jm.collapse_all();
+                    isAllExpanded = false;
+                    
+                    centerView();
+                    console.log('✅ 思维导图加载成功');
+                    
+                    // 设置正确的按钮文字
+                    const toggleBtn = document.getElementById('toggleBtn');
+                    if (toggleBtn) {
+                        toggleBtn.textContent = isAllExpanded ? '全部收起' : '全部展开';
+                    }
+                    
+                    // 显示手势提示
+                    setTimeout(() => {
+                        showGestureHint('思维导图加载完成！');
+                    }, 800);
+                }, 500);
+                
+                // 添加节点深度属性用于样式
+                addNodeDepthAttributes();
+                
+            } catch (error) {
+                console.error('❌ 加载思维导图失败:', error);
+                showError('加载思维导图失败: ' + error.message);
+            }
+        }
+        
+        // 添加节点深度属性
+        function addNodeDepthAttributes() {
+            setTimeout(() => {
+                const nodes = document.querySelectorAll('jmnode');
+                nodes.forEach(node => {
+                    const nodeId = node.getAttribute('nodeid');
+                    if (nodeId === 'root') {
+                        node.setAttribute('depth', '0');
+                    } else {
+                        // 计算节点深度
+                        let depth = 0;
+                        let parent = node.parentElement;
+                        while (parent && !parent.classList.contains('jsmind-inner')) {
+                            if (parent.tagName === 'JMNODE') {
+                                depth++;
+                            }
+                            parent = parent.parentElement;
+                        }
+                        node.setAttribute('depth', depth.toString());
+                    }
+                });
+            }, 100);
+        }
+        
+        // 刷新功能已移至原生导航栏，此函数保留用于兼容性
+        function refreshMindMap() {
+            // 通知iOS重新加载
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.refreshMindMap) {
+                window.webkit.messageHandlers.refreshMindMap.postMessage({});
+                showGestureHint('正在请求刷新...');
+            } else {
+                console.log('⚠️ 无法连接到iOS，使用本地刷新');
+                if (mindMapData) {
+                    showLoading('正在刷新思维导图...');
+                    setTimeout(() => {
+                        loadMindMap(mindMapData);
+                        showGestureHint('思维导图已刷新');
+                    }, 500);
+                }
+            }
+        }
+        
+        function toggleExpandCollapse() {
+            if (jm) {
+                if (isAllExpanded) {
+                    jm.collapse_all();
+                    isAllExpanded = false;
+                    showGestureHint('已收起全部节点');
+                    console.log('📁 收起全部');
+                } else {
+                    jm.expand_all();
+                    isAllExpanded = true;
+                    showGestureHint('已展开全部节点');
+                    console.log('📂 展开全部');
+                }
+                
+                // 更新按钮文字
+                const toggleBtn = document.getElementById('toggleBtn');
+                if (toggleBtn) {
+                    toggleBtn.textContent = isAllExpanded ? '全部收起' : '全部展开';
+                }
+                
+                // 重置工具栏隐藏计时器
+                resetToolbarTimer();
+            }
+        }
+        
+        function centerView() {
+            if (jm) {
+                jm.view.center_root();
+                showGestureHint('已居中显示');
+                console.log('🎯 居中显示');
+            }
+        }
+        
+        // 更新按钮状态
+        function updateZoomButtonStates() {
+            const zoomInBtn = document.querySelector('.zoom-controls button:last-child');
+            const zoomOutBtn = document.querySelector('.zoom-controls button:first-child');
+            
+            if (zoomInBtn && zoomOutBtn) {
+                // 更新放大按钮状态
+                zoomInBtn.disabled = (zoomConfig.currentZoom >= zoomConfig.maxZoom);
+                
+                // 更新缩小按钮状态
+                zoomOutBtn.disabled = (zoomConfig.currentZoom <= zoomConfig.minZoom);
+            }
+        }
+        
+        // 放大功能 - 每次放大10%
+        function zoomIn() {
+            if (!jm) return;
+            
+            const newZoom = Math.min(zoomConfig.currentZoom + zoomConfig.zoomStep, zoomConfig.maxZoom);
+            if (newZoom !== zoomConfig.currentZoom) {
+                zoomConfig.currentZoom = newZoom;
+                jm.view.setZoom(newZoom);
+                
+                const zoomPercent = Math.round(newZoom * 100);
+                showGestureHint(`放大至 ${zoomPercent}%`);
+                console.log(`🔍 放大至 ${zoomPercent}%`);
+            } else {
+                // 已达到边界，显示当前比例但不改变缩放
+                const zoomPercent = Math.round(zoomConfig.currentZoom * 100);
+                showGestureHint(`已达到最大缩放 ${zoomPercent}%`);
+            }
+            
+            // 更新按钮状态
+            updateZoomButtonStates();
+            
+            // 重置按钮隐藏计时器
+            resetZoomControlsTimer();
+        }
+        
+        // 缩小功能 - 每次缩小10%
+        function zoomOut() {
+            if (!jm) return;
+            
+            const newZoom = Math.max(zoomConfig.currentZoom - zoomConfig.zoomStep, zoomConfig.minZoom);
+            if (newZoom !== zoomConfig.currentZoom) {
+                zoomConfig.currentZoom = newZoom;
+                jm.view.setZoom(newZoom);
+                
+                const zoomPercent = Math.round(newZoom * 100);
+                showGestureHint(`缩小至 ${zoomPercent}%`);
+                console.log(`🔍 缩小至 ${zoomPercent}%`);
+            } else {
+                // 已达到边界，显示当前比例但不改变缩放
+                const zoomPercent = Math.round(zoomConfig.currentZoom * 100);
+                showGestureHint(`已达到最小缩放 ${zoomPercent}%`);
+            }
+            
+            // 更新按钮状态
+            updateZoomButtonStates();
+            
+            // 重置按钮隐藏计时器
+            resetZoomControlsTimer();
+        }
+        
+        // 显示手势提示
+        function showGestureHint(message) {
+            const hint = document.getElementById('gestureHint');
+            if (hint) {
+                hint.textContent = message;
+                hint.classList.add('show');
+                
+                clearTimeout(gestureHintTimer);
+                gestureHintTimer = setTimeout(() => {
+                    hint.classList.remove('show');
+                    // 恢复默认提示
+                    setTimeout(() => {
+                        hint.textContent = '拖拽移动 • 双击居中 • 点击节点选择';
+                    }, 300);
+                }, 2000);
+            }
+        }
+        
+        // UI状态管理
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        function showLoading(message = '正在解析思维导图...') {
+            const loading = document.getElementById('loading');
+            const loadingText = loading.querySelector('.loading-text');
+            loadingText.textContent = message;
+            loading.style.display = 'block';
+            hideError();
+            hideToolbar();
+        }
+        
+        function showError(message) {
+            hideLoading();
+            hideToolbar();
+            const error = document.getElementById('error');
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = message;
+            error.style.display = 'block';
+            console.error('❌ 错误:', message);
+        }
+        
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+        
+        function showToolbar() {
+            const toolbar = document.getElementById('toolbar');
+            toolbar.style.display = 'flex';
+            // 强制重绘后添加显示类
+            setTimeout(() => {
+                toolbar.classList.remove('hidden');
+                toolbar.classList.add('show');
+            }, 10);
+            
+            showZoomControls();
+            
+            // 启动自动隐藏计时器
+            resetToolbarTimer();
+        }
+        
+        function hideToolbar() {
+            const toolbar = document.getElementById('toolbar');
+            toolbar.classList.remove('show');
+            toolbar.classList.add('hidden');
+            
+            // 动画完成后隐藏元素
+            setTimeout(() => {
+                if (toolbar.classList.contains('hidden')) {
+                    toolbar.style.display = 'none';
+                }
+            }, 300);
+            
+            hideZoomControls();
+        }
+        
+        // 显示缩放控制按钮
+        function showZoomControls() {
+            const zoomControls = document.getElementById('zoomControls');
+            zoomControls.style.display = 'flex';
+            // 强制重绘后添加显示类
+            setTimeout(() => {
+                zoomControls.classList.remove('hidden');
+                zoomControls.classList.add('show');
+                // 更新按钮状态
+                updateZoomButtonStates();
+            }, 10);
+            
+            // 启动自动隐藏计时器
+            resetZoomControlsTimer();
+        }
+        
+        // 隐藏缩放控制按钮
+        function hideZoomControls() {
+            const zoomControls = document.getElementById('zoomControls');
+            zoomControls.classList.remove('show');
+            zoomControls.classList.add('hidden');
+            
+            // 动画完成后隐藏元素
+            setTimeout(() => {
+                if (zoomControls.classList.contains('hidden')) {
+                    zoomControls.style.display = 'none';
+                }
+            }, 300);
+        }
+        
+        // 重置缩放控制按钮隐藏计时器
+        function resetZoomControlsTimer() {
+            // 清除现有计时器
+            if (zoomControlsTimer) {
+                clearTimeout(zoomControlsTimer);
+            }
+            
+            // 设置新的计时器
+            zoomControlsTimer = setTimeout(() => {
+                hideZoomControls();
+            }, ZOOM_CONTROLS_HIDE_DELAY);
+        }
+        
+        // 取消自动隐藏（当用户交互时）
+        function cancelZoomControlsTimer() {
+            if (zoomControlsTimer) {
+                clearTimeout(zoomControlsTimer);
+                zoomControlsTimer = null;
+            }
+        }
+        
+        // 重置工具栏隐藏计时器
+        function resetToolbarTimer() {
+            // 清除现有计时器
+            if (toolbarTimer) {
+                clearTimeout(toolbarTimer);
+            }
+            
+            // 设置新的计时器
+            toolbarTimer = setTimeout(() => {
+                hideToolbar();
+            }, TOOLBAR_HIDE_DELAY);
+        }
+        
+        // 取消工具栏自动隐藏
+        function cancelToolbarTimer() {
+            if (toolbarTimer) {
+                clearTimeout(toolbarTimer);
+                toolbarTimer = null;
+            }
+        }
+        
+        function retryLoad() {
+            hideError();
+            if (mindMapData) {
+                showLoading('正在重新加载...');
+                setTimeout(() => {
+                    loadMindMap(mindMapData);
+                }, 500);
+            } else {
+                // 通知iOS重新加载
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.retryLoad) {
+                    window.webkit.messageHandlers.retryLoad.postMessage({});
+                }
+            }
+        }
+        
+        // 增强的键盘快捷键支持
+        document.addEventListener('keydown', function(event) {
+            if (!jm) return;
+            
+            switch(event.keyCode) {
+                case 32: // 空格键 - 切换展开/收起选中节点
+                    event.preventDefault();
+                    const selectedNode = jm.get_selected_node();
+                    if (selectedNode) {
+                        jm.toggle_node(selectedNode.id);
+                        showGestureHint('切换节点展开状态');
+                    } else {
+                        toggleExpandCollapse();
+                    }
+                    break;
+                case 67: // C 键 - 居中
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        centerView();
+                    }
+                    break;
+                case 187: // + 键 - 放大
+                case 61:  // = 键 - 放大 (不按shift)
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        showZoomControls(); // 显示缩放按钮
+                        zoomIn();
+                    }
+                    break;
+                case 189: // - 键 - 缩小
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        showZoomControls(); // 显示缩放按钮
+                        zoomOut();
+                    }
+                    break;
+                case 82: // R 键 - 刷新
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        refreshMindMap();
+                    }
+                    break;
+                case 69: // E 键 - 展开/收起全部
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        // 显示工具栏
+                        showToolbar();
+                        toggleExpandCollapse();
+                    }
+                    break;
+                case 27: // ESC 键 - 取消选择
+                    event.preventDefault();
+                    if (jm.get_selected_node()) {
+                        jm.select_clear();
+                        showGestureHint('已取消选择');
+                    }
+                    break;
+            }
+        });
+        
+        // 简化的缩放系统
+        let zoomConfig = {
+            minZoom: 0.5,            // 最小50%
+            maxZoom: 2.0,            // 最大200%
+            zoomStep: 0.1,           // 每次缩放10%
+            currentZoom: 1.0         // 当前缩放级别
+        };
+        
+        // 按钮自动隐藏
+        let zoomControlsTimer = null;
+        let toolbarTimer = null;
+        const ZOOM_CONTROLS_HIDE_DELAY = 3000; // 3秒后隐藏
+        const TOOLBAR_HIDE_DELAY = 3000; // 3秒后隐藏
+        
+        // 双击居中功能和交互检测
+        let lastTouchTime = 0;
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length === 1) {
+                // 显示所有控制按钮
+                showZoomControls();
+                
+                // 如果工具栏已显示，重置计时器
+                const toolbar = document.getElementById('toolbar');
+                if (toolbar.style.display === 'flex') {
+                    resetToolbarTimer();
+                }
+                
+                // 双击检测
+                const currentTime = performance.now();
+                const timeDiff = currentTime - lastTouchTime;
+                
+                if (timeDiff < 300 && timeDiff > 0) {
+                    centerView();
+                }
+                lastTouchTime = currentTime;
+            }
+        });
+        
+        // 触摸移动时重置隐藏计时器
+        document.addEventListener('touchmove', function(event) {
+            resetZoomControlsTimer();
+            
+            // 如果工具栏已显示，重置计时器
+            const toolbar = document.getElementById('toolbar');
+            if (toolbar.style.display === 'flex') {
+                resetToolbarTimer();
+            }
+        });
+        
+        // 触摸结束时重置隐藏计时器
+        document.addEventListener('touchend', function(event) {
+            resetZoomControlsTimer();
+            
+            // 如果工具栏已显示，重置计时器
+            const toolbar = document.getElementById('toolbar');
+            if (toolbar.style.display === 'flex') {
+                resetToolbarTimer();
+            }
+        });
+        
+
+        
+
+        
+        // 防止默认的缩放和滚动行为
+        document.addEventListener('gesturestart', function(event) {
+            event.preventDefault();
+        });
+        
+        document.addEventListener('gesturechange', function(event) {
+            event.preventDefault();
+        });
+        
+        document.addEventListener('gestureend', function(event) {
+            event.preventDefault();
+        });
+        
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 XMind查看器页面加载完成');
+            
+            // 显示初始手势提示
+            setTimeout(() => {
+                showGestureHint('XMind 查看器已就绪');
+            }, 1000);
+            
+            // 如果有预设数据，直接加载
+            if (typeof window.initialMindMapData !== 'undefined') {
+                loadMindMap(window.initialMindMapData);
+            }
+        });
+        
+        // 暴露给iOS的全局函数
+        window.loadMindMap = loadMindMap;
+        window.showError = showError;
+        window.showLoading = showLoading;
+        
+        console.log('🚀 XMind jsMind查看器初始化完成');
+    </script>
+</body>
+</html> 

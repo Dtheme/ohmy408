@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Markdown + LaTeX 阅读器</title>
+                <!-- 引入 Marked.js -->
+                <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+                <!-- 引入 MathJax 配置 -->
+                <script>
+                    window.MathJax = {
+                        tex: {
+                            inlineMath: [['$', '$'], ['\\(', '\\)']],     // 行内公式分隔符
+                            displayMath: [['$$', '$$'], ['\\[', '\\]']], // 块级公式分隔符
+                            processEscapes: true,                        // 支持反斜杠转义
+                            processEnvironments: true,                   // 支持环境
+                            packages: {
+                                '[+]': ['base', 'ams', 'amssymb', 'boldsymbol', 'physics', 'mhchem', 'newcommand', 'configmacros']
+                            },
+                            tags: 'ams',                                 // 公式编号
+                            tagSide: 'right',                           // 编号位置
+                            tagIndent: '0.8em'                          // 编号缩进
+                        },
+                        chtml: {
+                            scale: 1.1,                                 // 公式缩放
+                            minScale: 0.5,                              // 最小缩放
+                            matchFontHeight: false,                     // 匹配字体高度
+                            displayAlign: 'center',                     // 居中对齐
+                            displayIndent: '0em'                        // 显示缩进
+                        },
+                        startup: {
+                            typeset: false                              // 禁止自动初始化，手动控制渲染
+                        },
+                        loader: {
+                            load: ['[tex]/mhchem', '[tex]/physics', '[tex]/configmacros']
+                        }
+                    };
+                </script>
+                <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+                <style>
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                        max-width: 100%;
+                        margin: 0;
+                        padding: 20px;
+                        box-sizing: border-box;
+                    }
+                    
+                    #rendered-content {
+                        max-width: 100%;
+                        margin: 0 auto;
+                    }
+                    
+                    /* 标题样式 */
+                    h1, h2, h3, h4, h5, h6 {
+                        margin-top: 1.5em;
+                        margin-bottom: 0.5em;
+                        font-weight: 600;
+                        line-height: 1.25;
+                    }
+                    
+                    h1 { font-size: 2em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+                    h2 { font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+                    h3 { font-size: 1.25em; }
+                    h4 { font-size: 1em; }
+                    h5 { font-size: 0.875em; }
+                    h6 { font-size: 0.85em; color: #666; }
+                    
+                    /* 段落样式 */
+                    p {
+                        margin-bottom: 1em;
+                    }
+                    
+                    /* 代码样式 */
+                    code {
+                        background-color: #f6f8fa;
+                        border-radius: 3px;
+                        font-size: 85%;
+                        margin: 0;
+                        padding: 2px 4px;
+                        font-family: 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', Consolas, 'Courier New', monospace;
+                    }
+                    
+                    pre {
+                        background-color: #f6f8fa;
+                        border-radius: 6px;
+                        font-size: 85%;
+                        line-height: 1.45;
+                        overflow: auto;
+                        padding: 16px;
+                        margin: 1em 0;
+                    }
+                    
+                    pre code {
+                        background-color: transparent;
+                        border: 0;
+                        display: inline;
+                        line-height: inherit;
+                        margin: 0;
+                        overflow: visible;
+                        padding: 0;
+                        word-wrap: normal;
+                    }
+                    
+                    /* 引用样式 */
+                    blockquote {
+                        border-left: 4px solid #dfe2e5;
+                        margin: 1em 0;
+                        padding: 0 1em;
+                        color: #6a737d;
+                    }
+                    
+                    /* 列表样式 */
+                    ul, ol {
+                        margin-bottom: 1em;
+                        padding-left: 2em;
+                    }
+                    
+                    li {
+                        margin-bottom: 0.25em;
+                    }
+                    
+                    /* 表格样式 */
+                    table {
+                        border-collapse: collapse;
+                        border-spacing: 0;
+                        width: 100%;
+                        margin: 1em 0;
+                        overflow: auto;
+                        display: block;
+                        white-space: nowrap;
+                    }
+                    
+                    table thead tr {
+                        background-color: #f6f8fa;
+                    }
+                    
+                    table th, table td {
+                        border: 1px solid #dfe2e5;
+                        padding: 6px 13px;
+                        text-align: left;
+                    }
+                    
+                    table th {
+                        font-weight: 600;
+                    }
+                    
+                    table tr:nth-child(2n) {
+                        background-color: #f6f8fa;
+                    }
+                    
+                    /* 链接样式 */
+                    a {
+                        color: #0366d6;
+                        text-decoration: none;
+                    }
+                    
+                    a:hover {
+                        text-decoration: underline;
+                    }
+                    
+                    /* 分割线样式 */
+                    hr {
+                        border: 0;
+                        border-top: 1px solid #eee;
+                        margin: 2em 0;
+                    }
+                    
+                    /* 图片样式 */
+                    img {
+                        max-width: 100%;
+                        height: auto;
+                        border-radius: 4px;
+                        margin: 0.5em 0;
+                    }
+                    
+                    /* MathJax 公式样式 */
+                    .MathJax {
+                        font-size: 1.1em !important;
+                    }
+                    
+                    .MathJax_Display {
+                        margin: 1em 0 !important;
+                    }
+                    
+                    /* 响应式设计 */
+                    @media (max-width: 768px) {
+                        body {
+                            padding: 10px;
+                            font-size: 14px;
+                        }
+                        
+                        table {
+                            font-size: 12px;
+                        }
+                    }
+                    
+                    /* 暗色模式支持 */
+                    @media (prefers-color-scheme: dark) {
+                        body:not(.light-mode) {
+                            background-color: #0d1117;
+                            color: #c9d1d9;
+                        }
+                        
+                        body:not(.light-mode) h1, body:not(.light-mode) h2 {
+                            border-bottom-color: #21262d;
+                        }
+                        
+                        body:not(.light-mode) h6 {
+                            color: #8b949e;
+                        }
+                        
+                        body:not(.light-mode) code {
+                            background-color: #161b22;
+                            color: #e6edf3;
+                        }
+                        
+                        body:not(.light-mode) pre {
+                            background-color: #161b22;
+                        }
+                        
+                        body:not(.light-mode) blockquote {
+                            border-left-color: #3c434b;
+                            color: #8b949e;
+                        }
+                        
+                        body:not(.light-mode) table th, body:not(.light-mode) table td {
+                            border-color: #30363d;
+                        }
+                        
+                        body:not(.light-mode) table thead tr, body:not(.light-mode) table tr:nth-child(2n) {
+                            background-color: #161b22;
+                        }
+                        
+                        body:not(.light-mode) a {
+                            color: #58a6ff;
+                        }
+                        
+                        body:not(.light-mode) hr {
+                            border-top-color: #21262d;
+                        }
+                        
+                        body:not(.light-mode) #theme-toggle {
+                            background-color: #21262d;
+                            color: #c9d1d9;
+                            border-color: #30363d;
+                        }
+                        
+                        body:not(.light-mode) #theme-toggle:hover {
+                            background-color: #30363d;
+                        }
+                    }
+                    
+                    /* 手动深色模式 */
+                    body.dark-mode {
+                        background-color: #0d1117;
+                        color: #c9d1d9;
+                    }
+                    
+                    body.dark-mode h1, body.dark-mode h2 {
+                        border-bottom-color: #21262d;
+                    }
+                    
+                    body.dark-mode h6 {
+                        color: #8b949e;
+                    }
+                    
+                    body.dark-mode code {
+                        background-color: #161b22;
+                        color: #e6edf3;
+                    }
+                    
+                    body.dark-mode pre {
+                        background-color: #161b22;
+                    }
+                    
+                    body.dark-mode blockquote {
+                        border-left-color: #3c434b;
+                        color: #8b949e;
+                    }
+                    
+                    body.dark-mode table th, body.dark-mode table td {
+                        border-color: #30363d;
+                    }
+                    
+                    body.dark-mode table thead tr, body.dark-mode table tr:nth-child(2n) {
+                        background-color: #161b22;
+                    }
+                    
+                    body.dark-mode a {
+                        color: #58a6ff;
+                    }
+                    
+                    body.dark-mode hr {
+                        border-top-color: #21262d;
+                    }
+                    
+                    body.dark-mode #theme-toggle {
+                        background-color: #21262d;
+                        color: #c9d1d9;
+                        border-color: #30363d;
+                    }
+                    
+                    body.dark-mode #theme-toggle:hover {
+                        background-color: #30363d;
+                    }
+                    
+                    /* 主题切换按钮样式 */
+                    #theme-toggle {
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background-color: #f6f8fa;
+                        border: 1px solid #d0d7de;
+                        border-radius: 6px;
+                        padding: 8px 12px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-family: inherit;
+                        transition: all 0.2s ease;
+                        z-index: 1000;
+                        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    }
+                    
+                    #theme-toggle:hover {
+                        background-color: #f3f4f6;
+                        transform: translateY(-1px);
+                        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+                    }
+                    
+                    #theme-toggle:active {
+                        transform: translateY(0);
+                    }
+                    
+                    /* 响应式设计 - 移动端调整按钮位置 */
+                    @media (max-width: 768px) {
+                        #theme-toggle {
+                            top: 10px;
+                            right: 10px;
+                            padding: 6px 10px;
+                            font-size: 12px;
+                        }
+                    }
+                </style>
+            </head>
+    <body>
+        <button id="theme-toggle" title="切换深色/浅色模式">深色</button>
+        <div id="rendered-content"></div>
+        
+        <script>
+            
+            // 配置 Marked.js
+            marked.setOptions({
+                breaks: true,        // 支持换行
+                tables: true,        // 支持表格
+                gfm: true,          // 支持GitHub Flavored Markdown
+                headerIds: true,     // 生成标题ID
+                smartLists: true,    // 智能列表
+                smartypants: true,   // 智能标点
+                xhtml: true,         // XHTML兼容
+                mangle: false,       // 禁用邮箱混淆
+                sanitize: false      // 禁用HTML清理
+            });
+            
+            var text = "";
+            
+            // 主题管理
+            class ThemeManager {
+                constructor() {
+                    this.init();
+                }
+                
+                init() {
+                    // 从本地存储获取主题设置
+                    const savedTheme = localStorage.getItem('theme');
+                    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    
+                    // 确定初始主题
+                    if (savedTheme) {
+                        this.setTheme(savedTheme);
+                    } else if (systemPrefersDark) {
+                        this.setTheme('dark');
+                    } else {
+                        this.setTheme('light');
+                    }
+                    
+                    // 绑定切换按钮事件
+                    const toggleButton = document.getElementById('theme-toggle');
+                    toggleButton.addEventListener('click', () => this.toggleTheme());
+                    
+                    // 监听系统主题变化
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                        if (!localStorage.getItem('theme')) {
+                            this.setTheme(e.matches ? 'dark' : 'light');
+                        }
+                    });
+                }
+                
+                setTheme(theme) {
+                    const body = document.body;
+                    const toggleButton = document.getElementById('theme-toggle');
+                    
+                    // 移除所有主题类
+                    body.classList.remove('dark-mode', 'light-mode');
+                    
+                    if (theme === 'dark') {
+                        body.classList.add('dark-mode');
+                        toggleButton.textContent = '浅色';
+                        toggleButton.title = '切换到浅色模式';
+                    } else {
+                        body.classList.add('light-mode');
+                        toggleButton.textContent = '深色';
+                        toggleButton.title = '切换到深色模式';
+                    }
+                    
+                    // 保存到本地存储
+                    localStorage.setItem('theme', theme);
+                    this.currentTheme = theme;
+                }
+                
+                toggleTheme() {
+                    const newTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+                    this.setTheme(newTheme);
+                }
+                
+                getCurrentTheme() {
+                    return this.currentTheme;
+                }
+            }
+            
+            // 初始化主题管理器
+            const themeManager = new ThemeManager();
+            
+            // 渲染函数
+            function renderMarkdown(markdownText) {
+                try {
+                    // 直接渲染完整的Markdown内容
+                    text = markdownText;
+                    const html = marked.parse(text);
+                    document.getElementById('rendered-content').innerHTML = html;
+                    
+                    // 渲染数学公式
+                    MathJax.typesetPromise([document.getElementById('rendered-content')])
+                        .then(() => {
+                            console.log('MathJax渲染完成');
+                        })
+                        .catch((err) => {
+                            console.error('MathJax渲染错误:', err);
+                        });
+                        
+                } catch (error) {
+                    console.error('Markdown渲染错误:', error);
+                    document.getElementById('rendered-content').innerHTML = 
+                        '<div style="color: red; padding: 20px;">渲染错误: ' + error.message + '</div>';
+                }
+            }
+            
+            // 暴露给客户端调用
+            window.renderMarkdown = renderMarkdown;
+        </script>
+        
+    </body>
+</html>

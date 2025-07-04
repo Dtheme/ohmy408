@@ -1,0 +1,33 @@
+{
+  "originHash" : "35cd4bc5b11671211cc43f542379a0b98bfcd18f31b2045c9e3a4649b4d22ee0",
+  "pins" : [
+    {
+      "identity" : "photobrowser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/JiongXing/PhotoBrowser",
+      "state" : {
+        "revision" : "e3940567f29372640f8e491ab0d85e0e3a88f023",
+        "version" : "3.1.5"
+      }
+    },
+    {
+      "identity" : "snapkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SnapKit/SnapKit.git",
+      "state" : {
+        "revision" : "2842e6e84e82eb9a8dac0100ca90d9444b0307f4",
+        "version" : "5.7.1"
+      }
+    },
+    {
+      "identity" : "zipfoundation",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/weichsel/ZIPFoundation",
+      "state" : {
+        "revision" : "02b6abe5f6eef7e3cbd5f247c5cc24e246efcfe0",
+        "version" : "0.9.19"
+      }
+    }
+  ],
+  "version" : 3
+}
