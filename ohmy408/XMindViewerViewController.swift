@@ -429,6 +429,7 @@ class XMindViewerViewController: UIViewController {
         if let childrenTopics = topic["children"] as? [String: Any],
            let attached = childrenTopics["attached"] as? [[String: Any]] {
             print("📝 使用children.attached格式解析子节点")
+            _ = childrenTopics // 标记为已使用
             for childTopic in attached {
                 let childNode = convertTopicToNode(childTopic)
                 children.append(childNode)
@@ -611,14 +612,12 @@ class XMindViewerViewController: UIViewController {
     
     /// 复制文件到共享目录
     private func copyFileToSharedDirectory(file: MarkdownFile) throws -> URL {
-        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let inboxDir = documentsDir.appendingPathComponent("Inbox")
+        let tempDir = FileManager.default.temporaryDirectory
+        let appTempDir = tempDir.appendingPathComponent("XMindShare_\(ProcessInfo.processInfo.processIdentifier)")
         
-        try FileManager.default.createDirectory(at: inboxDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: appTempDir, withIntermediateDirectories: true)
         
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let fileName = "\(timestamp)_\(file.displayName)"
-        let sharedFileURL = inboxDir.appendingPathComponent(fileName)
+        let sharedFileURL = appTempDir.appendingPathComponent(file.displayName)
         
         if FileManager.default.fileExists(atPath: sharedFileURL.path) {
             try FileManager.default.removeItem(at: sharedFileURL)
@@ -629,26 +628,67 @@ class XMindViewerViewController: UIViewController {
         let attributes = [FileAttributeKey.posixPermissions: 0o644]
         try FileManager.default.setAttributes(attributes, ofItemAtPath: sharedFileURL.path)
         
+        print("✅ 文件已复制到临时共享目录: \(sharedFileURL.path)")
+        
         return sharedFileURL
     }
     
     /// 使用文档交互控制器打开文件
     private func openFileWithDocumentController(_ fileURL: URL) {
-        let documentController = UIDocumentInteractionController(url: fileURL)
-        documentController.delegate = self
-        documentController.name = fileURL.lastPathComponent
-        documentController.uti = "com.xmind.xmind"
-        
-        if documentController.presentOpenInMenu(from: view.bounds, in: view, animated: true) {
-            print("✅ 成功调用文档交互控制器")
-        } else {
-            showErrorAlert("无法打开XMind文件。请确保已安装XMind应用。")
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            showErrorAlert("文件不存在：\(fileURL.path)")
+            return
         }
+        
+        print("🔍 尝试使用改进的文件共享方式打开XMind文件")
+        print("  - 文件路径: \(fileURL.path)")
+        
+        // 使用UIActivityViewController，这是iOS推荐的文件共享方式
+        let activityVC = UIActivityViewController(
+            activityItems: [fileURL],
+            applicationActivities: nil
+        )
+        
+        activityVC.setValue("在XMind中打开", forKey: "subject")
+        
+        // 设置完成处理程序
+        activityVC.completionWithItemsHandler = { [weak self] (activityType: UIActivity.ActivityType?, completed: Bool, returnedItems: [Any]?, error: Error?) in
+            if let error = error {
+                print("❌ 分享失败: \(error.localizedDescription)")
+                self?.showErrorAlert("分享失败: \(error.localizedDescription)")
+            } else if completed {
+                print("✅ 分享成功: \(activityType?.rawValue ?? "未知应用")")
+                if let activityType = activityType, 
+                   activityType.rawValue.lowercased().contains("xmind") {
+                    self?.showSuccessAlert("文件已成功发送到XMind应用")
+                } else {
+                    self?.showSuccessAlert("文件已成功分享到外部应用")
+                }
+            } else {
+                print("⚠️ 用户取消分享")
+            }
+        }
+        
+        // 设置iPad的popover
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        
+        present(activityVC, animated: true)
     }
     
     /// 显示错误提示
     private func showErrorAlert(_ message: String) {
         let alert = UIAlertController(title: "错误", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "确定", style: .default))
+        present(alert, animated: true)
+    }
+    
+    /// 显示成功提示
+    private func showSuccessAlert(_ message: String) {
+        let alert = UIAlertController(title: "成功", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "确定", style: .default))
         present(alert, animated: true)
     }

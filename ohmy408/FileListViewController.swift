@@ -946,6 +946,15 @@ class FileListViewController: UIViewController {
         }
         previewAction.setValue(UIImage(systemName: "eye"), forKey: "image")
         
+        // 调试信息（仅在开发模式下显示）
+        #if DEBUG
+        let debugAction = UIAlertAction(title: "调试信息", style: .default) { [weak self] _ in
+            self?.showDebugInfo(for: file)
+        }
+        debugAction.setValue(UIImage(systemName: "ladybug"), forKey: "image")
+        alertController.addAction(debugAction)
+        #endif
+        
         // 取消
         let cancelAction = UIAlertAction(title: "取消", style: .cancel)
         
@@ -961,6 +970,82 @@ class FileListViewController: UIViewController {
         }
         
         present(alertController, animated: true)
+    }
+    
+    /// 显示调试信息
+    private func showDebugInfo(for file: MarkdownFile) {
+        let debugReport = generateDebugReport(fileURL: file.url)
+        
+        let alertController = UIAlertController(
+            title: "XMind调试信息",
+            message: debugReport,
+            preferredStyle: .alert
+        )
+        
+        let copyAction = UIAlertAction(title: "复制到剪贴板", style: .default) { _ in
+            UIPasteboard.general.string = debugReport
+        }
+        
+        let closeAction = UIAlertAction(title: "关闭", style: .cancel)
+        
+        alertController.addAction(copyAction)
+        alertController.addAction(closeAction)
+        
+        present(alertController, animated: true)
+    }
+    
+    /// 生成调试报告
+    private func generateDebugReport(fileURL: URL) -> String {
+        let fileManager = FileManager.default
+        
+        // 检查XMind应用状态
+        let schemes = ["xmind://", "com.xmind.zen://", "com.xmind.mindmap://", "xmind-2021://"]
+        var installedSchemes: [String] = []
+        
+        for scheme in schemes {
+            if let url = URL(string: scheme), UIApplication.shared.canOpenURL(url) {
+                installedSchemes.append(scheme)
+            }
+        }
+        
+        // 检查文件状态
+        let exists = fileManager.fileExists(atPath: fileURL.path)
+        let isReadable = fileManager.isReadableFile(atPath: fileURL.path)
+        let isXMindFile = fileURL.pathExtension.lowercased() == "xmind"
+        let fileSize = getFileSize(fileURL)
+        
+        var report = """
+        === XMind文件共享调试报告 ===
+        
+        📱 XMind应用状态:
+        - 已安装: \(!installedSchemes.isEmpty ? "✅ 是" : "❌ 否")
+        - 可用URL Schemes: \(installedSchemes.joined(separator: ", "))
+        
+        📄 文件状态:
+        - 文件存在: \(exists ? "✅ 是" : "❌ 否")
+        - 可读取: \(isReadable ? "✅ 是" : "❌ 否")
+        - 是XMind文件: \(isXMindFile ? "✅ 是" : "❌ 否")
+        - 文件大小: \(fileSize)
+        - 文件路径: \(fileURL.path)
+        
+        🔧 建议解决方案:
+        """
+        
+        if installedSchemes.isEmpty {
+            report += "\n- 请先安装XMind应用"
+        }
+        
+        if !exists {
+            report += "\n- 文件不存在，请检查文件路径"
+        }
+        
+        if !isReadable {
+            report += "\n- 文件权限不足，请检查文件权限"
+        }
+        
+        report += "\n\n=== 报告结束 ==="
+        
+        return report
     }
     
     /// 使用XMind应用打开文件
@@ -1019,19 +1104,17 @@ class FileListViewController: UIViewController {
         }
     }
     
-    /// 复制文件到共享目录 - 确保外部应用可以访问
+    /// 复制文件到临时目录 - 使用系统推荐的文件共享方式
     private func copyFileToSharedDirectory(file: MarkdownFile) throws -> URL {
-        // 使用文档目录的Inbox文件夹，这是iOS推荐的应用间文件共享位置
-        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let inboxDir = documentsDir.appendingPathComponent("Inbox")
+        // 使用系统临时目录，这是iOS推荐的应用间文件共享位置
+        let tempDir = FileManager.default.temporaryDirectory
+        let appTempDir = tempDir.appendingPathComponent("XMindShare_\(ProcessInfo.processInfo.processIdentifier)")
         
-        // 创建Inbox目录
-        try FileManager.default.createDirectory(at: inboxDir, withIntermediateDirectories: true)
+        // 创建应用特定的临时目录
+        try FileManager.default.createDirectory(at: appTempDir, withIntermediateDirectories: true)
         
-        // 生成唯一的文件名
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let fileName = "\(timestamp)_\(file.displayName)"
-        let sharedFileURL = inboxDir.appendingPathComponent(fileName)
+        // 使用原始文件名，确保XMind能够正确识别
+        let sharedFileURL = appTempDir.appendingPathComponent(file.displayName)
         
         // 如果文件已存在，先删除
         if FileManager.default.fileExists(atPath: sharedFileURL.path) {
@@ -1044,7 +1127,10 @@ class FileListViewController: UIViewController {
         let attributes = [FileAttributeKey.posixPermissions: 0o644]
         try FileManager.default.setAttributes(attributes, ofItemAtPath: sharedFileURL.path)
         
-        print("✅ 文件已复制到共享目录: \(sharedFileURL.path)")
+        print("✅ 文件已复制到临时共享目录: \(sharedFileURL.path)")
+        print("  - 文件大小: \(getFileSize(sharedFileURL))")
+        print("  - 文件存在: \(FileManager.default.fileExists(atPath: sharedFileURL.path))")
+        
         return sharedFileURL
     }
     
@@ -1052,46 +1138,22 @@ class FileListViewController: UIViewController {
     
     /// 使用文档交互控制器打开文件
     private func openFileWithDocumentController(_ fileURL: URL) {
-        // 首先尝试使用URL scheme（但不期望成功）
-        tryOpenWithURLScheme(fileURL)
-        
         // 验证文件是否存在
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             showErrorToast("文件不存在：\(fileURL.path)")
             return
         }
         
-        // 创建文档交互控制器
-        let documentController = UIDocumentInteractionController(url: fileURL)
-        documentController.delegate = self
-        documentController.name = fileURL.lastPathComponent
-        
-        // 设置MIME类型和UTI
-        documentController.uti = "com.xmind.xmind"
-        
-        print("🔍 尝试使用文档交互控制器打开XMind文件")
+        print("🔍 尝试使用改进的文件共享方式打开XMind文件")
         print("  - 文件路径: \(fileURL.path)")
         print("  - 文件大小: \(getFileSize(fileURL))")
-        print("  - UTI: \(documentController.uti ?? "未设置")")
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
-            // 首先尝试直接打开（打开到XMind应用）
-            if documentController.presentOpenInMenu(from: self.view.bounds, in: self.view, animated: true) {
-                print("✅ 成功调用文档交互控制器打开文件")
-            } else {
-                print("⚠️ 文档交互控制器的打开菜单失败，尝试预览")
-                
-                // 如果打开菜单失败，尝试预览
-                if documentController.presentPreview(animated: true) {
-                    print("✅ 成功显示文档预览")
-                } else {
-                    print("⚠️ 文档预览也失败，降级到分享菜单")
-                    // 如果预览也失败，显示分享菜单
-                    self.presentActivityViewController(with: fileURL)
-                }
-            }
+            // 使用UIActivityViewController而不是UIDocumentInteractionController
+            // 这是iOS推荐的文件共享方式，成功率更高
+            self.presentActivityViewController(with: fileURL, preferXMind: true)
         }
     }
     
@@ -1224,11 +1286,31 @@ class FileListViewController: UIViewController {
     }
     
     /// 显示活动视图控制器
-    private func presentActivityViewController(with fileURL: URL) {
+    private func presentActivityViewController(with fileURL: URL, preferXMind: Bool = false) {
         let activityVC = UIActivityViewController(
             activityItems: [fileURL],
             applicationActivities: nil
         )
+        
+        // 如果是专门为XMind优化，设置标题
+        if preferXMind {
+            activityVC.setValue("在XMind中打开", forKey: "subject")
+        }
+        
+        // 设置完成处理程序
+        activityVC.completionWithItemsHandler = { [weak self] (activityType: UIActivity.ActivityType?, completed: Bool, returnedItems: [Any]?, error: Error?) in
+            if let error = error {
+                print("❌ 分享失败: \(error.localizedDescription)")
+                self?.showErrorToast("分享失败: \(error.localizedDescription)")
+            } else if completed {
+                print("✅ 分享成功: \(activityType?.rawValue ?? "未知应用")")
+                if let activityType = activityType {
+                    self?.handleShareSuccess(activityType: activityType)
+                }
+            } else {
+                print("⚠️ 用户取消分享")
+            }
+        }
         
         // 设置iPad的popover
         if let popover = activityVC.popoverPresentationController {
@@ -1238,6 +1320,17 @@ class FileListViewController: UIViewController {
         }
         
         present(activityVC, animated: true)
+    }
+    
+    /// 处理分享成功
+    private func handleShareSuccess(activityType: UIActivity.ActivityType) {
+        let activityString = activityType.rawValue
+        
+        if activityString.lowercased().contains("xmind") {
+            showSuccessToast("文件已成功发送到XMind应用")
+        } else {
+            showSuccessToast("文件已成功分享到外部应用")
+        }
     }
     
     /// 打开图片查看器
