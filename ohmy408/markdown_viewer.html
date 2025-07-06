@@ -368,28 +368,58 @@
                         left: 0 !important;
                     }
                     
+                    /* 目录遮罩层样式 */
+                    #toc-overlay.open {
+                        opacity: 1 !important;
+                        visibility: visible !important;
+                    }
+                    
+                    /* 暗色模式下的遮罩层 */
+                    body.dark-mode #toc-overlay {
+                        background-color: rgba(0, 0, 0, 0.5) !important;
+                    }
+                    
                     /* 响应式设计 - 移动端优化 */
                     @media (max-width: 480px) {
-                        /* 小屏幕：目录面板全屏 */
+                        /* 小屏幕：目录面板75% */
                         #toc-panel {
-                            width: 100vw !important;
-                            left: -100vw !important;
+                            width: 75vw !important;
+                            max-width: 320px !important;
+                            left: -75vw !important;
                         }
                         
                         #toc-panel.open {
                             left: 0 !important;
+                        }
+                        
+                        /* 小屏幕下显示遮罩层 */
+                        #toc-overlay.open {
+                            display: block !important;
                         }
                     }
                     
                     @media (min-width: 481px) and (max-width: 768px) {
-                        /* 中等屏幕：目录面板70% */
+                        /* 中等屏幕：目录面板60% */
                         #toc-panel {
-                            width: 70vw !important;
-                            left: -70vw !important;
+                            width: 60vw !important;
+                            max-width: 350px !important;
+                            left: -60vw !important;
                         }
                         
                         #toc-panel.open {
                             left: 0 !important;
+                        }
+                        
+                        /* 中等屏幕下显示遮罩层 */
+                        #toc-overlay.open {
+                            display: block !important;
+                        }
+                    }
+                    
+                    @media (min-width: 769px) {
+                        /* 大屏幕：隐藏遮罩层 */
+                        #toc-overlay {
+                            display: none !important;
                         }
                     }
                     
@@ -468,6 +498,9 @@
         <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
             <button id="theme-toggle" style="background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 14px; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);" title="切换深色/浅色模式">深色</button>
         </div>
+        
+        <!-- 目录面板背景遮罩 -->
+        <div id="toc-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.3); z-index: 997; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;"></div>
         
         <!-- 目录面板 -->
         <div id="toc-panel" style="width: 280px; background-color: #f6f8fa; border-right: 1px solid #d0d7de; position: fixed; top: 0; left: -280px; height: 100vh; height: 100dvh; overflow-y: auto; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 998; box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1); will-change: transform;">
@@ -574,14 +607,17 @@
             function initTOC() {
                 const toggleButton = document.getElementById('toc-toggle');
                 const tocPanel = document.getElementById('toc-panel');
+                const tocOverlay = document.getElementById('toc-overlay');
                 
                 // 切换目录显示
                 function toggleTOC() {
                     tocOpen = !tocOpen;
                     if (tocOpen) {
                         tocPanel.classList.add('open');
+                        tocOverlay.classList.add('open');
                     } else {
                         tocPanel.classList.remove('open');
+                        tocOverlay.classList.remove('open');
                     }
                 }
                 
@@ -590,6 +626,7 @@
                     if (tocOpen) {
                         tocOpen = false;
                         tocPanel.classList.remove('open');
+                        tocOverlay.classList.remove('open');
                     }
                 }
                 
@@ -600,9 +637,16 @@
                     toggleTOC();
                 });
                 
+                // 点击遮罩层关闭目录
+                tocOverlay.addEventListener('click', closeTOC);
+                tocOverlay.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    closeTOC();
+                });
+                
                 // 点击面板外区域关闭目录（支持触摸）
                 function handleOutsideClick(e) {
-                    if (tocOpen && !e.target.closest('#toc-panel') && !e.target.closest('#toc-toggle')) {
+                    if (tocOpen && !e.target.closest('#toc-panel') && !e.target.closest('#toc-toggle') && !e.target.closest('#toc-overlay')) {
                         closeTOC();
                     }
                 }
