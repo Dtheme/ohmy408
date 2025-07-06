@@ -95,7 +95,13 @@ class XMindViewerViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         setupNavigationBar()
+        setupThemeManager()
         loadXMindFile()
+    }
+    
+    deinit {
+        // 移除主题变化监听
+        NotificationCenter.default.removeObserver(self, name: ThemeManager.themeDidChangeNotification, object: nil)
     }
     
     // MARK: - UI设置
@@ -167,6 +173,7 @@ class XMindViewerViewController: UIViewController {
             target: self,
             action: #selector(closeButtonTapped)
         )
+        closeButton.tintColor = .systemOrange
         
         // 添加分享按钮
         let shareButton = UIBarButtonItem(
@@ -175,6 +182,7 @@ class XMindViewerViewController: UIViewController {
             target: self,
             action: #selector(shareButtonTapped)
         )
+        shareButton.tintColor = .systemOrange
         
         // 添加刷新按钮
         let refreshButton = UIBarButtonItem(
@@ -183,9 +191,13 @@ class XMindViewerViewController: UIViewController {
             target: self,
             action: #selector(refreshButtonTapped)
         )
+        refreshButton.tintColor = .systemOrange
+        
+        // 添加主题切换按钮
+        let themeButton = ThemeManager.shared.createThemeToggleButton()
         
         navigationItem.leftBarButtonItem = closeButton
-        navigationItem.rightBarButtonItems = [shareButton, refreshButton]
+        navigationItem.rightBarButtonItems = [themeButton, shareButton, refreshButton]
     }
     
     // MARK: - XMind文件处理
@@ -517,6 +529,45 @@ class XMindViewerViewController: UIViewController {
     }
     
     // MARK: - 事件处理
+    // MARK: - 主题管理
+    private func setupThemeManager() {
+        // 监听主题变化
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(themeDidChange),
+            name: ThemeManager.themeDidChangeNotification,
+            object: nil
+        )
+        
+        print("🎨 XMindViewerViewController 主题管理器已设置")
+    }
+    
+    @objc private func themeDidChange(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let theme = userInfo["theme"] as? UIUserInterfaceStyle else {
+            return
+        }
+        
+        print("🎨 XMindViewerViewController 主题已变化为: \(theme == .dark ? "深色" : "浅色")")
+        
+        // 更新主题按钮图标
+        updateThemeButton()
+    }
+    
+    private func updateThemeButton() {
+        guard let rightBarButtonItems = navigationItem.rightBarButtonItems,
+              let themeButton = rightBarButtonItems.first else {
+            return
+        }
+        
+        let currentTheme = ThemeManager.shared.getCurrentTheme()
+        let imageName = (currentTheme == .dark) ? "sun.max" : "moon"
+        themeButton.image = UIImage(systemName: imageName)
+        
+        print("🔄 XMindViewerViewController 主题按钮图标已更新: \(imageName)")
+    }
+    
+    // MARK: - 按钮事件
     @objc private func closeButtonTapped() {
         dismiss(animated: true)
     }

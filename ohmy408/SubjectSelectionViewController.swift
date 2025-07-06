@@ -1,4 +1,5 @@
 import UIKit
+import SnapKit
 
 /// 科目选择视图控制器 - 用于文件导入时选择目标科目
 class SubjectSelectionViewController: UIViewController {
@@ -32,7 +33,6 @@ class SubjectSelectionViewController: UIViewController {
     }
     
     private func setupNavigationBar() {
-        navigationBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(navigationBar)
         
         let navItem = UINavigationItem(title: "选择科目")
@@ -56,7 +56,6 @@ class SubjectSelectionViewController: UIViewController {
     }
     
     private func setupTableView() {
-        tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.delegate = self
         tableView.dataSource = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "SubjectCell")
@@ -64,16 +63,15 @@ class SubjectSelectionViewController: UIViewController {
     }
     
     private func setupConstraints() {
-        NSLayoutConstraint.activate([
-            navigationBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            navigationBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            navigationBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            
-            tableView.topAnchor.constraint(equalTo: navigationBar.bottomAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
+        navigationBar.snp.makeConstraints { make in
+            make.top.equalTo(view.safeAreaLayoutGuide.snp.top)
+            make.leading.trailing.equalTo(view)
+        }
+        
+        tableView.snp.makeConstraints { make in
+            make.top.equalTo(navigationBar.snp.bottom)
+            make.leading.trailing.bottom.equalTo(view)
+        }
     }
     
     // MARK: - 数据加载

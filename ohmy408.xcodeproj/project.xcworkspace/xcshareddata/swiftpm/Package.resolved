@@ -4,7 +4,7 @@
     {
       "identity" : "photobrowser",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/JiongXing/PhotoBrowser",
+      "location" : "https://github.com/JiongXing/PhotoBrowser.git",
       "state" : {
         "revision" : "e3940567f29372640f8e491ab0d85e0e3a88f023",
         "version" : "3.1.5"

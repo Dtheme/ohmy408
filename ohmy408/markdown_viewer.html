@@ -37,6 +37,8 @@
                     };
                 </script>
                 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+                <!-- 引入 Mermaid.js -->
+                <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
                 <style>
                     body {
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -122,33 +124,65 @@
                         margin-bottom: 0.25em;
                     }
                     
-                    /* 表格样式 */
+                    /* 表格样式优化 */
                     table {
                         border-collapse: collapse;
                         border-spacing: 0;
                         width: 100%;
                         margin: 1em 0;
-                        overflow: auto;
-                        display: block;
-                        white-space: nowrap;
+                        border-radius: 8px;
+                        overflow: hidden;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                        background-color: #ffffff;
+                        display: table;
                     }
                     
                     table thead tr {
-                        background-color: #f6f8fa;
+                        background: linear-gradient(135deg, #f6f8fa 0%, #e1e7eb 100%);
                     }
                     
                     table th, table td {
                         border: 1px solid #dfe2e5;
-                        padding: 6px 13px;
+                        padding: 12px 16px;
                         text-align: left;
+                        word-wrap: break-word;
+                        vertical-align: top;
                     }
                     
                     table th {
                         font-weight: 600;
+                        color: #24292f;
+                        font-size: 14px;
+                        letter-spacing: 0.5px;
                     }
                     
                     table tr:nth-child(2n) {
-                        background-color: #f6f8fa;
+                        background-color: #f8f9fa;
+                    }
+                    
+                    table tr:hover {
+                        background-color: #f1f3f4;
+                        transition: background-color 0.2s ease;
+                    }
+                    
+                    /* 表格响应式优化 */
+                    @media (max-width: 768px) {
+                        table {
+                            font-size: 13px;
+                            margin: 0.5em 0;
+                        }
+                        
+                        table th, table td {
+                            padding: 8px 12px;
+                        }
+                        
+                        /* 小屏幕表格滚动 */
+                        .table-container {
+                            overflow-x: auto;
+                            margin: 1em 0;
+                            border-radius: 8px;
+                            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                        }
                     }
                     
                     /* 链接样式 */
@@ -204,20 +238,30 @@
                     }
                     
                     /* 暗色模式支持 */
+                    /* 深色模式 - 系统自动检测 */
                     @media (prefers-color-scheme: dark) {
                         body:not(.light-mode) {
                             background-color: #0d1117;
-                            color: #c9d1d9;
+                            color: #e6edf3;
+                            transition: all 0.3s ease;
                         }
                         
+                        /* 标题深度优化 */
                         body:not(.light-mode) h1, body:not(.light-mode) h2 {
-                            border-bottom-color: #21262d;
+                            border-bottom: 1px solid transparent;
+                            color: #f0f6fc;
+                            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+                        }
+                        
+                        body:not(.light-mode) h3, body:not(.light-mode) h4, body:not(.light-mode) h5 {
+                            color: #e6edf3;
                         }
                         
                         body:not(.light-mode) h6 {
                             color: #8b949e;
                         }
                         
+                        /* 代码块深度优化 */
                         body:not(.light-mode) code {
                             background-color: #161b22;
                             color: #e6edf3;
@@ -227,63 +271,133 @@
                             background-color: #161b22;
                         }
                         
+                        /* 引用块深度优化 */
                         body:not(.light-mode) blockquote {
-                            border-left-color: #3c434b;
+                            border-left: 4px solid #58a6ff;
                             color: #8b949e;
+                            background-color: #161b22;
+                            border-radius: 6px;
+                            padding: 16px;
+                            margin: 16px 0;
+                            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                        }
+                        
+                        /* 表格深度优化 */
+                        body:not(.light-mode) table {
+                            border: 1px solid #30363d;
+                            border-radius: 8px;
+                            overflow: hidden;
+                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+                            background-color: #0d1117;
                         }
                         
                         body:not(.light-mode) table th, body:not(.light-mode) table td {
-                            border-color: #30363d;
+                            border: 1px solid #30363d;
+                            background-color: #0d1117;
+                            color: #e6edf3;
                         }
                         
-                        body:not(.light-mode) table thead tr, body:not(.light-mode) table tr:nth-child(2n) {
+                        body:not(.light-mode) table thead tr {
+                            background: linear-gradient(135deg, #21262d 0%, #30363d 100%);
+                        }
+                        
+                        body:not(.light-mode) table th {
+                            color: #f0f6fc;
+                            font-weight: 600;
+                        }
+                        
+                        body:not(.light-mode) table tr:nth-child(2n) {
                             background-color: #161b22;
                         }
                         
+                        body:not(.light-mode) table tr:hover {
+                            background-color: #21262d;
+                            transition: background-color 0.2s ease;
+                        }
+                        
+                        body:not(.light-mode) table th {
+                            color: #f0f6fc;
+                            font-weight: 600;
+                        }
+                        
+                        /* 链接深度优化 */
                         body:not(.light-mode) a {
                             color: #58a6ff;
+                            transition: all 0.2s ease;
+                            text-decoration: none;
                         }
                         
+                        body:not(.light-mode) a:hover {
+                            color: #79c0ff;
+                            text-shadow: 0 0 8px rgba(88, 166, 255, 0.3);
+                        }
+                        
+                        /* 分割线深度优化 */
                         body:not(.light-mode) hr {
-                            border-top-color: #21262d;
+                            border-top: 1px solid #30363d;
+                            background: linear-gradient(90deg, transparent, #30363d, transparent);
+                            opacity: 0.8;
                         }
                         
-                        /* 代码复制按钮自动暗色模式样式 */
+                        /* 代码复制按钮深度优化 */
                         body:not(.light-mode) .code-copy-button {
-                            background-color: #21262d !important;
-                            color: #c9d1d9 !important;
-                            border-color: #30363d !important;
+                            background: linear-gradient(135deg, #21262d 0%, #30363d 100%) !important;
+                            color: #e6edf3 !important;
+                            border: 1px solid #30363d !important;
+                            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+                            transition: all 0.3s ease !important;
                         }
                         
                         body:not(.light-mode) .code-copy-button:hover {
-                            background-color: #30363d !important;
+                            background: linear-gradient(135deg, #30363d 0%, #484f58 100%) !important;
+                            color: #f0f6fc !important;
+                            transform: translateY(-2px) !important;
+                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
                         }
                         
-                        body:not(.light-mode) #theme-toggle {
-                            background-color: #21262d;
-                            color: #c9d1d9;
-                            border-color: #30363d;
+
+                        
+                        /* 目录按钮磨砂玻璃风格 */
+                        body:not(.light-mode) #toc-toggle {
+                            background: rgba(255, 255, 255, 0.1) !important;
+                            color: #e6edf3 !important;
+                            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                            backdrop-filter: blur(10px) !important;
+                            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+                            transition: all 0.3s ease !important;
                         }
                         
-                        body:not(.light-mode) #theme-toggle:hover {
-                            background-color: #30363d;
+                        body:not(.light-mode) #toc-toggle:hover {
+                            background: rgba(255, 255, 255, 0.2) !important;
+                            color: #f0f6fc !important;
+                            transform: translateY(-2px) !important;
+                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
                         }
                     }
                     
-                    /* 手动深色模式 */
+                    /* 手动深色模式 - 深度优化 */
                     body.dark-mode {
                         background-color: #0d1117;
-                        color: #c9d1d9;
+                        color: #e6edf3;
+                        transition: all 0.3s ease;
                     }
                     
+                    /* 标题深度优化 */
                     body.dark-mode h1, body.dark-mode h2 {
-                        border-bottom-color: #21262d;
+                        border-bottom: 1px solid transparent;
+                        color: #f0f6fc;
+                        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+                    }
+                    
+                    body.dark-mode h3, body.dark-mode h4, body.dark-mode h5 {
+                        color: #e6edf3;
                     }
                     
                     body.dark-mode h6 {
                         color: #8b949e;
                     }
                     
+                    /* 代码块深度优化 */
                     body.dark-mode code {
                         background-color: #161b22;
                         color: #e6edf3;
@@ -293,74 +407,201 @@
                         background-color: #161b22;
                     }
                     
+                    /* 引用块深度优化 */
                     body.dark-mode blockquote {
-                        border-left-color: #3c434b;
+                        border-left: 4px solid #58a6ff;
                         color: #8b949e;
+                        background-color: #161b22;
+                        border-radius: 6px;
+                        padding: 16px;
+                        margin: 16px 0;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                    }
+                    
+                    /* 表格深度优化 */
+                    body.dark-mode table {
+                        border: 1px solid #30363d;
+                        border-radius: 8px;
+                        overflow: hidden;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+                        background-color: #0d1117;
                     }
                     
                     body.dark-mode table th, body.dark-mode table td {
-                        border-color: #30363d;
+                        border: 1px solid #30363d;
+                        background-color: #0d1117;
+                        color: #e6edf3;
                     }
                     
-                    body.dark-mode table thead tr, body.dark-mode table tr:nth-child(2n) {
+                    body.dark-mode table thead tr {
+                        background: linear-gradient(135deg, #21262d 0%, #30363d 100%);
+                    }
+                    
+                    body.dark-mode table th {
+                        color: #f0f6fc;
+                        font-weight: 600;
+                    }
+                    
+                    body.dark-mode table tr:nth-child(2n) {
                         background-color: #161b22;
                     }
                     
+                    body.dark-mode table tr:hover {
+                        background-color: #21262d;
+                        transition: background-color 0.2s ease;
+                    }
+                    
+                    /* 链接深度优化 */
                     body.dark-mode a {
                         color: #58a6ff;
+                        transition: all 0.2s ease;
+                        text-decoration: none;
                     }
                     
+                    body.dark-mode a:hover {
+                        color: #79c0ff;
+                        text-shadow: 0 0 8px rgba(88, 166, 255, 0.3);
+                    }
+                    
+                    /* 分割线深度优化 */
                     body.dark-mode hr {
-                        border-top-color: #21262d;
+                        border-top: 1px solid #30363d;
+                        background: linear-gradient(90deg, transparent, #30363d, transparent);
+                        opacity: 0.8;
                     }
                     
-                    body.dark-mode #theme-toggle {
-                        background-color: #21262d;
-                        color: #c9d1d9;
-                        border-color: #30363d;
-                    }
+
                     
-                    body.dark-mode #theme-toggle:hover {
-                        background-color: #30363d;
-                    }
-                    
-                    /* 暗色模式下的目录样式 */
-                    body.dark-mode #toc-panel {
-                        background-color: #161b22 !important;
-                        border-right-color: #30363d !important;
-                        color: #c9d1d9 !important;
-                    }
-                    
+                    /* 目录按钮磨砂玻璃风格 */
                     body.dark-mode #toc-toggle {
-                        background-color: #21262d !important;
-                        border-color: #30363d !important;
-                        color: #c9d1d9 !important;
+                        background: rgba(255, 255, 255, 0.1) !important;
+                        color: #e6edf3 !important;
+                        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                        backdrop-filter: blur(10px) !important;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+                        transition: all 0.3s ease !important;
                     }
                     
                     body.dark-mode #toc-toggle:hover {
-                        background-color: #30363d !important;
+                        background: rgba(255, 255, 255, 0.2) !important;
+                        color: #f0f6fc !important;
+                        transform: translateY(-2px) !important;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
                     }
                     
-                    /* 目录链接样式优化 */
+                    /* 强调文本深度优化 */
+                    body.dark-mode strong {
+                        color: #f0f6fc;
+                        font-weight: 600;
+                    }
+                    
+                    body.dark-mode em {
+                        color: #e6edf3;
+                        font-style: italic;
+                    }
+                    
+                    body.dark-mode mark {
+                        background-color: #9e6a03;
+                        color: #f0f6fc;
+                        padding: 2px 4px;
+                        border-radius: 3px;
+                    }
+                    
+                    body.dark-mode del {
+                        color: #8b949e;
+                        text-decoration: line-through;
+                    }
+                    
+                    /* 列表深度优化 */
+                    body.dark-mode ul, body.dark-mode ol {
+                        color: #e6edf3;
+                    }
+                    
+                    body.dark-mode li {
+                        margin-bottom: 0.5em;
+                    }
+                    
+                    /* 任务列表深度优化 */
+                    body.dark-mode .task-list-item {
+                        color: #e6edf3;
+                    }
+                    
+                    body.dark-mode .task-list-item input[type="checkbox"] {
+                        accent-color: #58a6ff;
+                    }
+                    
+                    /* 图片深度优化 */
+                    body.dark-mode img {
+                        border: 1px solid #30363d;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+                    }
+                    
+                    body.dark-mode img:hover {
+                        border-color: #58a6ff;
+                        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+                    }
+                    
+                    /* 目录面板深度优化 */
+                    body.dark-mode #toc-panel {
+                        background: linear-gradient(180deg, #161b22 0%, #0d1117 100%) !important;
+                        border-right: 1px solid #30363d !important;
+                        color: #e6edf3 !important;
+                        backdrop-filter: blur(10px) !important;
+                        box-shadow: 2px 0 12px rgba(0, 0, 0, 0.5) !important;
+                    }
+                    
+                    body.dark-mode #toc-toggle {
+                        background: rgba(255, 255, 255, 0.1) !important;
+                        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                        color: #e6edf3 !important;
+                        backdrop-filter: blur(10px) !important;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+                        transition: all 0.3s ease !important;
+                    }
+                    
+                    body.dark-mode #toc-toggle:hover {
+                        background: rgba(255, 255, 255, 0.2) !important;
+                        color: #f0f6fc !important;
+                        transform: translateY(-2px) !important;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+                    }
+                    
+                    /* 目录链接深度优化 */
                     .toc-link:hover {
-                        background-color: #f3f4f6 !important;
+                        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%) !important;
                         color: #0969da !important;
+                        border-radius: 4px !important;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+                    }
+                    
+                    body.dark-mode .toc-link {
+                        color: #e6edf3 !important;
+                        transition: all 0.2s ease !important;
                     }
                     
                     body.dark-mode .toc-link:hover {
-                        background-color: #30363d !important;
+                        background: linear-gradient(135deg, #30363d 0%, #484f58 100%) !important;
                         color: #58a6ff !important;
+                        border-radius: 4px !important;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+                        transform: translateX(4px) !important;
                     }
                     
-                    /* 代码复制按钮暗色模式样式 */
+                    /* 代码复制按钮深度优化 */
                     body.dark-mode .code-copy-button {
-                        background-color: #21262d !important;
-                        color: #c9d1d9 !important;
-                        border-color: #30363d !important;
+                        background: linear-gradient(135deg, #21262d 0%, #30363d 100%) !important;
+                        color: #e6edf3 !important;
+                        border: 1px solid #30363d !important;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+                        transition: all 0.3s ease !important;
                     }
                     
                     body.dark-mode .code-copy-button:hover {
-                        background-color: #30363d !important;
+                        background: linear-gradient(135deg, #30363d 0%, #484f58 100%) !important;
+                        color: #f0f6fc !important;
+                        transform: translateY(-2px) !important;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
                     }
                     
                     /* 目录面板打开状态 */
@@ -374,9 +615,124 @@
                         visibility: visible !important;
                     }
                     
-                    /* 暗色模式下的遮罩层 */
+                    /* 遮罩层深度优化 */
                     body.dark-mode #toc-overlay {
-                        background-color: rgba(0, 0, 0, 0.5) !important;
+                        background: radial-gradient(circle, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.4) 100%) !important;
+                        backdrop-filter: blur(2px) !important;
+                        transition: all 0.3s ease !important;
+                    }
+                    
+                    /* Mermaid图表深色模式优化 */
+                    body.dark-mode .mermaid-diagram {
+                        background: linear-gradient(145deg, #161b22 0%, #0d1117 100%) !important;
+                        border: 1px solid #30363d !important;
+                        border-radius: 8px !important;
+                        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+                        padding: 16px !important;
+                    }
+                    
+                    /* MathJax公式深色模式优化 */
+                    body.dark-mode .MathJax {
+                        color: #e6edf3 !important;
+                        background-color: transparent !important;
+                    }
+                    
+                    body.dark-mode .MathJax_Display {
+                        background: linear-gradient(145deg, #161b22 0%, #0d1117 100%) !important;
+                        border: 1px solid #30363d !important;
+                        border-radius: 6px !important;
+                        padding: 16px !important;
+                        margin: 16px 0 !important;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+                    }
+                    
+                    /* 滚动条深度优化 */
+                    body.dark-mode::-webkit-scrollbar {
+                        width: 8px;
+                    }
+                    
+                    body.dark-mode::-webkit-scrollbar-track {
+                        background: #0d1117;
+                        border-radius: 4px;
+                    }
+                    
+                    body.dark-mode::-webkit-scrollbar-thumb {
+                        background: linear-gradient(180deg, #30363d 0%, #21262d 100%);
+                        border-radius: 4px;
+                        border: 1px solid #21262d;
+                    }
+                    
+                    body.dark-mode::-webkit-scrollbar-thumb:hover {
+                        background: linear-gradient(180deg, #484f58 0%, #30363d 100%);
+                    }
+                    
+                    /* 选择文本深色模式优化 */
+                    body.dark-mode ::selection {
+                        background-color: #264f78;
+                        color: #ffffff;
+                    }
+                    
+                    body.dark-mode ::-moz-selection {
+                        background-color: #264f78;
+                        color: #ffffff;
+                    }
+                    
+                    /* 焦点状态深度优化 */
+                    body.dark-mode button:focus,
+                    body.dark-mode a:focus {
+                        outline: 2px solid #58a6ff;
+                        outline-offset: 2px;
+                        border-radius: 4px;
+                    }
+                    
+                    /* 页面加载动画优化 */
+                    body.dark-mode #rendered-content {
+                        animation: fadeInUp 0.6s ease-out;
+                    }
+                    
+                    @keyframes fadeInUp {
+                        from {
+                            opacity: 0;
+                            transform: translateY(20px);
+                        }
+                        to {
+                            opacity: 1;
+                        transform: translateY(0);
+                        }
+                    }
+                    
+                    /* 浅色模式按钮磨砂玻璃风格 */
+                    body.light-mode #toc-toggle,
+                    body:not(.dark-mode) #toc-toggle {
+                        background: rgba(255, 255, 255, 0.7) !important;
+                        color: #24292f !important;
+                        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+                        backdrop-filter: blur(10px) !important;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+                        transition: all 0.3s ease !important;
+                    }
+                    
+                    body.light-mode #toc-toggle:hover,
+                    body:not(.dark-mode) #toc-toggle:hover {
+                        background: rgba(255, 255, 255, 0.9) !important;
+                        color: #24292f !important;
+                        transform: translateY(-2px) !important;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+                    }
+                    
+
+                    
+                    /* 按钮活跃状态优化 */
+                    #toc-toggle:active {
+                        transform: translateY(0) !important;
+                        transition: all 0.1s ease !important;
+                    }
+                    
+                    /* iOS Safari兼容性增强 */
+                    @supports (-webkit-backdrop-filter: blur(10px)) {
+                        #toc-toggle {
+                            -webkit-backdrop-filter: blur(10px) !important;
+                        }
                     }
                     
                     /* 响应式设计 - 移动端优化 */
@@ -430,12 +786,7 @@
                             left: 10px !important;
                         }
                         
-                        div[style*="right: 20px"] {
-                            top: 10px !important;
-                            right: 10px !important;
-                        }
-                        
-                        #toc-toggle, #theme-toggle {
+                        #toc-toggle {
                             padding: 6px 10px !important;
                             font-size: 12px !important;
                             -webkit-tap-highlight-color: transparent;
@@ -448,40 +799,731 @@
                         }
                     }
                     
-                    /* 主题切换按钮样式 */
-                    #theme-toggle {
-                        position: fixed;
-                        top: 20px;
-                        right: 20px;
-                        background-color: #f6f8fa;
-                        border: 1px solid #d0d7de;
-                        border-radius: 6px;
-                        padding: 8px 12px;
-                        cursor: pointer;
-                        font-size: 14px;
-                        font-family: inherit;
-                        transition: all 0.2s ease;
-                        z-index: 1000;
-                        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+                    
+                    /* Mermaid图表样式 */
+                    .mermaid-diagram {
+                        transition: all 0.3s ease;
+                        max-width: 100%;
+                        overflow-x: auto;
                     }
                     
-                    #theme-toggle:hover {
-                        background-color: #f3f4f6;
-                        transform: translateY(-1px);
-                        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+                    .mermaid-diagram svg {
+                        max-width: 100%;
+                        height: auto;
+                        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
                     }
                     
-                    #theme-toggle:active {
-                        transform: translateY(0);
+                    /* 深色模式下的Mermaid图表 */
+                    body.dark-mode .mermaid-diagram {
+                        border-color: #30363d !important;
+                        background-color: rgba(22, 27, 34, 0.8) !important;
                     }
                     
-                    /* 响应式设计 - 移动端调整按钮位置 */
+                    body.dark-mode .mermaid-diagram svg {
+                        filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.1));
+                    }
+                    
+                    /* 增强Mermaid图表文本对比度 */
+                    .mermaid-diagram svg text {
+                        font-weight: 700 !important;
+                        stroke: none !important;
+                        fill: #000000 !important;
+                        font-size: 14px !important;
+                        font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
+                        text-shadow: 0 0 1px rgba(0, 0, 0, 0.3) !important;
+                    }
+                    
+                    .mermaid-diagram svg .nodeLabel,
+                    .mermaid-diagram svg .edgeLabel text,
+                    .mermaid-diagram svg .messageText,
+                    .mermaid-diagram svg .labelText,
+                    .mermaid-diagram svg .loopText,
+                    .mermaid-diagram svg .noteText {
+                        fill: #000000 !important;
+                        font-weight: 700 !important;
+                        font-size: 13px !important;
+                        text-shadow: 0 0 1px rgba(0, 0, 0, 0.3) !important;
+                    }
+                    
+                    .mermaid-diagram svg .actor {
+                        stroke: #333333 !important;
+                        stroke-width: 2px !important;
+                        fill: #ffffff !important;
+                    }
+                    
+                    .mermaid-diagram svg .actor-line {
+                        stroke: #333333 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .messageLine0,
+                    .mermaid-diagram svg .messageLine1 {
+                        stroke: #333333 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg text {
+                        fill: #ffffff !important;
+                        text-shadow: 0 0 1px rgba(255, 255, 255, 0.5) !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .nodeLabel,
+                    body.dark-mode .mermaid-diagram svg .edgeLabel text,
+                    body.dark-mode .mermaid-diagram svg .messageText,
+                    body.dark-mode .mermaid-diagram svg .labelText,
+                    body.dark-mode .mermaid-diagram svg .loopText,
+                    body.dark-mode .mermaid-diagram svg .noteText {
+                        fill: #ffffff !important;
+                        text-shadow: 0 0 1px rgba(255, 255, 255, 0.5) !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .actor {
+                        stroke: #e5e7eb !important;
+                        fill: #374151 !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .actor-line {
+                        stroke: #e5e7eb !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .messageLine0,
+                    body.dark-mode .mermaid-diagram svg .messageLine1 {
+                        stroke: #e5e7eb !important;
+                    }
+                    
+                    /* 优化Mermaid图表背景和边框 */
+                    .mermaid-diagram svg rect,
+                    .mermaid-diagram svg polygon,
+                    .mermaid-diagram svg circle,
+                    .mermaid-diagram svg ellipse {
+                        stroke: #333333 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .edgePath .path {
+                        stroke: #333333 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg rect,
+                    body.dark-mode .mermaid-diagram svg polygon,
+                    body.dark-mode .mermaid-diagram svg circle,
+                    body.dark-mode .mermaid-diagram svg ellipse {
+                        stroke: #e5e7eb !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .edgePath .path {
+                        stroke: #e5e7eb !important;
+                    }
+                    
+                    /* 时间线图样式 */
+                    .mermaid-diagram svg .section0,
+                    .mermaid-diagram svg .section1,
+                    .mermaid-diagram svg .section2 {
+                        fill: #333333 !important;
+                        stroke: #333333 !important;
+                    }
+                    
+                    .mermaid-diagram svg .cScale0,
+                    .mermaid-diagram svg .cScale1,
+                    .mermaid-diagram svg .cScale2 {
+                        fill: #000000 !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .section0,
+                    body.dark-mode .mermaid-diagram svg .section1,
+                    body.dark-mode .mermaid-diagram svg .section2 {
+                        fill: #ffffff !important;
+                        stroke: #ffffff !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .cScale0,
+                    body.dark-mode .mermaid-diagram svg .cScale1,
+                    body.dark-mode .mermaid-diagram svg .cScale2 {
+                        fill: #ffffff !important;
+                    }
+                    
+                    /* Git图样式 */
+                    .mermaid-diagram svg .commit-id,
+                    .mermaid-diagram svg .commit-msg {
+                        fill: #000000 !important;
+                        font-weight: 700 !important;
+                        font-size: 12px !important;
+                        text-shadow: 0 0 1px rgba(0, 0, 0, 0.3) !important;
+                    }
+                    
+                    .mermaid-diagram svg .branch-label {
+                        fill: #000000 !important;
+                        font-weight: 600 !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .commit-id,
+                    body.dark-mode .mermaid-diagram svg .commit-msg,
+                    body.dark-mode .mermaid-diagram svg .branch-label {
+                        fill: #ffffff !important;
+                    }
+                    
+                    /* 饼图样式 */
+                    .mermaid-diagram svg .pieTitleText {
+                        fill: #000000 !important;
+                        font-weight: 600 !important;
+                        font-size: 16px !important;
+                    }
+                    
+                    .mermaid-diagram svg .slice {
+                        stroke: #333333 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .legend text {
+                        fill: #000000 !important;
+                        font-weight: 500 !important;
+                        font-size: 12px !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .pieTitleText,
+                    body.dark-mode .mermaid-diagram svg .legend text {
+                        fill: #ffffff !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .slice {
+                        stroke: #e5e7eb !important;
+                    }
+                    
+                    /* 象限图样式 */
+                    .mermaid-diagram svg .quadrant-text-0,
+                    .mermaid-diagram svg .quadrant-text-1,
+                    .mermaid-diagram svg .quadrant-text-2,
+                    .mermaid-diagram svg .quadrant-text-3 {
+                        fill: #000000 !important;
+                        font-weight: 600 !important;
+                        font-size: 12px !important;
+                    }
+                    
+                    .mermaid-diagram svg .xAxisLabel,
+                    .mermaid-diagram svg .yAxisLabel {
+                        fill: #000000 !important;
+                        font-weight: 500 !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .quadrant-text-0,
+                    body.dark-mode .mermaid-diagram svg .quadrant-text-1,
+                    body.dark-mode .mermaid-diagram svg .quadrant-text-2,
+                    body.dark-mode .mermaid-diagram svg .quadrant-text-3,
+                    body.dark-mode .mermaid-diagram svg .xAxisLabel,
+                    body.dark-mode .mermaid-diagram svg .yAxisLabel {
+                        fill: #ffffff !important;
+                    }
+                    
+                    /* 旅程图样式 */
+                    .mermaid-diagram svg .journey-section-text {
+                        fill: #000000 !important;
+                        font-weight: 700 !important;
+                        font-size: 14px !important;
+                        text-shadow: 0 0 1px rgba(0, 0, 0, 0.3) !important;
+                    }
+                    
+                    .mermaid-diagram svg .task-text {
+                        fill: #000000 !important;
+                        font-weight: 500 !important;
+                        font-size: 12px !important;
+                    }
+                    
+                    .mermaid-diagram svg .task-score-text {
+                        fill: #000000 !important;
+                        font-weight: 600 !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .journey-section-text,
+                    body.dark-mode .mermaid-diagram svg .task-text,
+                    body.dark-mode .mermaid-diagram svg .task-score-text {
+                        fill: #ffffff !important;
+                    }
+                    
+                    /* 需求图样式 */
+                    .mermaid-diagram svg .requirement,
+                    .mermaid-diagram svg .requirementText {
+                        fill: #000000 !important;
+                        font-weight: 500 !important;
+                        font-size: 12px !important;
+                    }
+                    
+                    .mermaid-diagram svg .element {
+                        stroke: #333333 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .requirement,
+                    body.dark-mode .mermaid-diagram svg .requirementText {
+                        fill: #ffffff !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .element {
+                        stroke: #e5e7eb !important;
+                    }
+                    
+                    /* 思维导图样式 */
+                    .mermaid-diagram svg .mindmap-node {
+                        stroke: #333333 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .mindmap-label {
+                        fill: #000000 !important;
+                        font-weight: 600 !important;
+                        font-size: 13px !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .mindmap-node {
+                        stroke: #e5e7eb !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .mindmap-label {
+                        fill: #ffffff !important;
+                    }
+                    
+                    /* 全局增强所有Mermaid图表的文本对比度 */
+                    .mermaid-diagram svg * {
+                        font-weight: 700 !important;
+                    }
+                    
+                    .mermaid-diagram svg tspan {
+                        font-weight: 700 !important;
+                        fill: #000000 !important;
+                        text-shadow: 0 0 1px rgba(0, 0, 0, 0.3) !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg tspan {
+                        fill: #ffffff !important;
+                        text-shadow: 0 0 1px rgba(255, 255, 255, 0.5) !important;
+                    }
+                    
+                    /* 甘特图移动端优化 */
+                    .mermaid-diagram svg .taskText {
+                        font-size: 13px !important;
+                        font-weight: 600 !important;
+                        fill: #1f2937 !important;
+                        text-shadow: 0 0 1px rgba(0, 0, 0, 0.2) !important;
+                    }
+                    
+                    .mermaid-diagram svg .sectionTitle {
+                        font-size: 15px !important;
+                        font-weight: 700 !important;
+                        fill: #1f2937 !important;
+                        text-shadow: 0 0 1px rgba(0, 0, 0, 0.3) !important;
+                    }
+                    
+                    .mermaid-diagram svg .today {
+                        fill: #ef4444 !important;
+                        stroke: #dc2626 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .done0,
+                    .mermaid-diagram svg .done1,
+                    .mermaid-diagram svg .done2,
+                    .mermaid-diagram svg .done3 {
+                        fill: #10b981 !important;
+                        stroke: #059669 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .active0,
+                    .mermaid-diagram svg .active1,
+                    .mermaid-diagram svg .active2,
+                    .mermaid-diagram svg .active3 {
+                        fill: #f59e0b !important;
+                        stroke: #d97706 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .crit0,
+                    .mermaid-diagram svg .crit1,
+                    .mermaid-diagram svg .crit2,
+                    .mermaid-diagram svg .crit3 {
+                        fill: #ef4444 !important;
+                        stroke: #dc2626 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .task {
+                        fill: #6b7280 !important;
+                        stroke: #4b5563 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .taskTextOutside {
+                        font-size: 12px !important;
+                        font-weight: 500 !important;
+                        fill: #374151 !important;
+                    }
+                    
+                    .mermaid-diagram svg .grid .tick text {
+                        font-size: 12px !important;
+                        font-weight: 500 !important;
+                        fill: #4b5563 !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .taskText,
+                    body.dark-mode .mermaid-diagram svg .sectionTitle {
+                        fill: #ffffff !important;
+                        text-shadow: 0 0 1px rgba(255, 255, 255, 0.5) !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .taskTextOutside,
+                    body.dark-mode .mermaid-diagram svg .grid .tick text {
+                        fill: #e5e7eb !important;
+                    }
+                    
+                    /* 实体关系图移动端优化 */
+                    .mermaid-diagram svg .entity {
+                        fill: #f8f9fa !important;
+                        stroke: #374151 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .entityLabel {
+                        font-size: 14px !important;
+                        font-weight: 700 !important;
+                        fill: #1f2937 !important;
+                        text-shadow: 0 0 1px rgba(0, 0, 0, 0.2) !important;
+                    }
+                    
+                    .mermaid-diagram svg .attributeBoxOdd,
+                    .mermaid-diagram svg .attributeBoxEven {
+                        fill: #ffffff !important;
+                        stroke: #d1d5db !important;
+                        stroke-width: 1px !important;
+                    }
+                    
+                    .mermaid-diagram svg .attributeBoxOdd text,
+                    .mermaid-diagram svg .attributeBoxEven text {
+                        font-size: 12px !important;
+                        font-weight: 500 !important;
+                        fill: #374151 !important;
+                    }
+                    
+                    .mermaid-diagram svg .relationshipLine {
+                        stroke: #374151 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .relationshipLabel {
+                        font-size: 11px !important;
+                        font-weight: 600 !important;
+                        fill: #6b7280 !important;
+                        text-shadow: 0 0 1px rgba(0, 0, 0, 0.2) !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .entity {
+                        fill: #374151 !important;
+                        stroke: #e5e7eb !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .entityLabel {
+                        fill: #ffffff !important;
+                        text-shadow: 0 0 1px rgba(255, 255, 255, 0.5) !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .attributeBoxOdd,
+                    body.dark-mode .mermaid-diagram svg .attributeBoxEven {
+                        fill: #4b5563 !important;
+                        stroke: #6b7280 !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .attributeBoxOdd text,
+                    body.dark-mode .mermaid-diagram svg .attributeBoxEven text {
+                        fill: #e5e7eb !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .relationshipLine {
+                        stroke: #e5e7eb !important;
+                    }
+                    
+                    body.dark-mode .mermaid-diagram svg .relationshipLabel {
+                        fill: #d1d5db !important;
+                        text-shadow: 0 0 1px rgba(255, 255, 255, 0.5) !important;
+                    }
+                    
+                    /* 移动端响应式优化 */
                     @media (max-width: 768px) {
-                        #theme-toggle {
-                            top: 10px;
-                            right: 10px;
-                            padding: 6px 10px;
-                            font-size: 12px;
+                        .mermaid-diagram svg {
+                            max-width: 100% !important;
+                            height: auto !important;
+                            transform-origin: top left !important;
+                        }
+                        
+                        /* 甘特图移动端缩放 */
+                        .mermaid-diagram svg[viewBox*="gantt"] {
+                            transform: scale(0.8) !important;
+                            transform-origin: top left !important;
+                        }
+                        
+                        /* 实体关系图移动端缩放 */
+                        .mermaid-diagram svg[viewBox*="er"] {
+                            transform: scale(0.9) !important;
+                            transform-origin: top left !important;
+                        }
+                        
+                        .mermaid-diagram svg .taskText {
+                            font-size: 12px !important;
+                        }
+                        
+                        .mermaid-diagram svg .sectionTitle {
+                            font-size: 14px !important;
+                        }
+                        
+                        .mermaid-diagram svg .entityLabel {
+                            font-size: 13px !important;
+                        }
+                        
+                        .mermaid-diagram svg .attributeBoxOdd text,
+                        .mermaid-diagram svg .attributeBoxEven text {
+                            font-size: 11px !important;
+                        }
+                        
+                        .mermaid-diagram svg .relationshipLabel {
+                            font-size: 10px !important;
+                        }
+                    }
+                    
+                    @media (max-width: 480px) {
+                        /* 超小屏幕进一步缩放 */
+                        .mermaid-diagram svg[viewBox*="gantt"] {
+                            transform: scale(0.7) !important;
+                        }
+                        
+                        .mermaid-diagram svg[viewBox*="er"] {
+                            transform: scale(0.8) !important;
+                        }
+                        
+                        .mermaid-diagram svg .taskText {
+                            font-size: 11px !important;
+                        }
+                        
+                        .mermaid-diagram svg .sectionTitle {
+                            font-size: 13px !important;
+                        }
+                        
+                        .mermaid-diagram svg .entityLabel {
+                            font-size: 12px !important;
+                        }
+                        
+                        .mermaid-diagram svg .attributeBoxOdd text,
+                        .mermaid-diagram svg .attributeBoxEven text {
+                            font-size: 10px !important;
+                        }
+                        
+                        .mermaid-diagram svg .relationshipLabel {
+                            font-size: 9px !important;
+                        }
+                    }
+                    
+                    /* 自定义classDef样式支持 */
+                    /* 系统架构流程图样式 */
+                    .mermaid-diagram svg .startEnd {
+                        fill: #e1f5fe !important;
+                        stroke: #01579b !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .process {
+                        fill: #f3e5f5 !important;
+                        stroke: #4a148c !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .engine {
+                        fill: #fff3e0 !important;
+                        stroke: #e65100 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .feature {
+                        fill: #e8f5e8 !important;
+                        stroke: #2e7d32 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    /* 应用状态转换图样式 */
+                    .mermaid-diagram svg .activeState {
+                        fill: #e8f5e8 !important;
+                        stroke: #2e7d32 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .errorState {
+                        fill: #ffebee !important;
+                        stroke: #c62828 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .processState {
+                        fill: #fff3e0 !important;
+                        stroke: #ef6c00 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .interactState {
+                        fill: #e3f2fd !important;
+                        stroke: #1565c0 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    /* 功能优先级分布图样式 */
+                    .mermaid-diagram svg .coreFeatures {
+                        fill: #e8f5e8 !important;
+                        stroke: #2e7d32 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .importantFeatures {
+                        fill: #e1f5fe !important;
+                        stroke: #1976d2 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .supportFeatures {
+                        fill: #fff3e0 !important;
+                        stroke: #f57c00 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .optionalFeatures {
+                        fill: #fce4ec !important;
+                        stroke: #c2185b !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    /* 类图样式 */
+                    .mermaid-diagram svg .renderer {
+                        fill: #e1f5fe !important;
+                        stroke: #01579b !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .manager {
+                        fill: #f3e5f5 !important;
+                        stroke: #4a148c !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .handler {
+                        fill: #fff3e0 !important;
+                        stroke: #e65100 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    /* 开发时间线图样式 */
+                    .mermaid-diagram svg .milestone {
+                        fill: #e8f5e8 !important;
+                        stroke: #2e7d32 !important;
+                        stroke-width: 3px !important;
+                    }
+                    
+                    .mermaid-diagram svg .optimization {
+                        fill: #fff3e0 !important;
+                        stroke: #f57c00 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .release {
+                        fill: #fce4ec !important;
+                        stroke: #c2185b !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    /* 系统需求关系图样式 */
+                    .mermaid-diagram svg .requirement {
+                        fill: #e8f5e8 !important;
+                        stroke: #2e7d32 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .lowRisk {
+                        fill: #e1f5fe !important;
+                        stroke: #1976d2 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .mediumRisk {
+                        fill: #fff3e0 !important;
+                        stroke: #f57c00 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .highRisk {
+                        fill: #fce4ec !important;
+                        stroke: #c2185b !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .component {
+                        fill: #f3e5f5 !important;
+                        stroke: #7b1fa2 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    /* 系统架构图样式 */
+                    .mermaid-diagram svg .root {
+                        fill: #e8f5e8 !important;
+                        stroke: #2e7d32 !important;
+                        stroke-width: 3px !important;
+                    }
+                    
+                    .mermaid-diagram svg .category {
+                        fill: #e1f5fe !important;
+                        stroke: #1976d2 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    .mermaid-diagram svg .module {
+                        fill: #fff3e0 !important;
+                        stroke: #f57c00 !important;
+                        stroke-width: 2px !important;
+                    }
+                    
+                    /* 深色模式下的自定义classDef样式 */
+                    body.dark-mode .mermaid-diagram svg .startEnd,
+                    body.dark-mode .mermaid-diagram svg .process,
+                    body.dark-mode .mermaid-diagram svg .engine,
+                    body.dark-mode .mermaid-diagram svg .feature,
+                    body.dark-mode .mermaid-diagram svg .activeState,
+                    body.dark-mode .mermaid-diagram svg .errorState,
+                    body.dark-mode .mermaid-diagram svg .processState,
+                    body.dark-mode .mermaid-diagram svg .interactState,
+                    body.dark-mode .mermaid-diagram svg .coreFeatures,
+                    body.dark-mode .mermaid-diagram svg .importantFeatures,
+                    body.dark-mode .mermaid-diagram svg .supportFeatures,
+                    body.dark-mode .mermaid-diagram svg .optionalFeatures,
+                    body.dark-mode .mermaid-diagram svg .renderer,
+                    body.dark-mode .mermaid-diagram svg .manager,
+                    body.dark-mode .mermaid-diagram svg .handler,
+                    body.dark-mode .mermaid-diagram svg .milestone,
+                    body.dark-mode .mermaid-diagram svg .optimization,
+                    body.dark-mode .mermaid-diagram svg .release,
+                    body.dark-mode .mermaid-diagram svg .requirement,
+                    body.dark-mode .mermaid-diagram svg .lowRisk,
+                    body.dark-mode .mermaid-diagram svg .mediumRisk,
+                    body.dark-mode .mermaid-diagram svg .highRisk,
+                    body.dark-mode .mermaid-diagram svg .component,
+                    body.dark-mode .mermaid-diagram svg .root,
+                    body.dark-mode .mermaid-diagram svg .category,
+                    body.dark-mode .mermaid-diagram svg .module {
+                        opacity: 0.8;
+                        filter: brightness(1.2);
+                    }
+
+                    /* 移动端Mermaid图表优化 */
+                    @media (max-width: 768px) {
+                        .mermaid-diagram {
+                            padding: 10px !important;
+                            margin: 10px 0 !important;
+                        }
+                        
+                        .mermaid-diagram svg {
+                            touch-action: pan-x pan-y;
                         }
                     }
                 </style>
@@ -489,15 +1531,12 @@
     <body>
         <!-- 左侧目录按钮 -->
         <div style="position: fixed; top: 20px; left: 20px; z-index: 1000;">
-            <button id="toc-toggle" style="background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 14px; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);" title="切换目录">
-                目录
+            <button id="toc-toggle" style="background: rgba(255, 255, 255, 0.7); color: #24292f; border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 8px; padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); backdrop-filter: blur(10px);" title="切换目录">
+                📚 目录
             </button>
         </div>
         
-        <!-- 右侧主题切换按钮 -->
-        <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
-            <button id="theme-toggle" style="background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 14px; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);" title="切换深色/浅色模式">深色</button>
-        </div>
+
         
         <!-- 目录面板背景遮罩 -->
         <div id="toc-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.3); z-index: 997; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;"></div>
@@ -518,7 +1557,7 @@
         
         <script>
             
-            // 配置 Marked.js
+            // 配置 Marked.js - 兼容现代版本和iOS WebView
             marked.setOptions({
                 breaks: true,        // 支持换行
                 tables: true,        // 支持表格
@@ -528,68 +1567,275 @@
                 smartypants: true,   // 智能标点
                 xhtml: true,         // XHTML兼容
                 mangle: false,       // 禁用邮箱混淆
-                sanitize: false      // 禁用HTML清理
+                // 移除sanitize选项，使用renderer自定义HTML处理
+            });
+            
+            // 自定义HTML渲染器 - 确保HTML内容被正确解析
+            const renderer = new marked.Renderer();
+            
+            // 保留原始HTML渲染方法
+            const originalHtml = renderer.html;
+            renderer.html = function(html) {
+                // 确保html是字符串类型
+                if (typeof html !== 'string') {
+                    return originalHtml ? originalHtml.call(this, html) : '';
+                }
+                // 直接返回HTML内容，不进行转义
+                return html;
+            };
+            
+            // 简化渲染器，专注于LaTeX和基本HTML标签
+            const originalParagraph = renderer.paragraph;
+            renderer.paragraph = function(text) {
+                // 确保text是字符串类型
+                if (typeof text !== 'string') {
+                    return originalParagraph.call(this, text);
+                }
+                
+                // 检查是否包含LaTeX公式，如果有则保持原始渲染
+                if (text.includes('$') || text.includes('\\(') || text.includes('\\[') || text.includes('\\begin{')) {
+                    // 包含LaTeX公式，使用默认段落渲染以确保MathJax正常处理
+                    return originalParagraph.call(this, text);
+                }
+                
+                // 否则使用默认的段落渲染
+                return originalParagraph.call(this, text);
+            };
+            
+            // 应用自定义渲染器
+            marked.setOptions({
+                renderer: renderer
             });
             
             var text = "";
             
-            // 主题管理
+            // 初始化 Mermaid
+            function initMermaid() {
+                if (typeof mermaid !== 'undefined') {
+                    console.log('🎨 初始化Mermaid图表渲染器');
+                    
+                    // 检查当前主题
+                    const isDarkMode = document.body.classList.contains('dark-mode') || 
+                                      (!document.body.classList.contains('light-mode') && 
+                                       window.matchMedia('(prefers-color-scheme: dark)').matches);
+                    
+                    mermaid.initialize({
+                        startOnLoad: false,
+                        theme: isDarkMode ? 'dark' : 'base',
+                        securityLevel: 'loose',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        fontSize: 16,
+                        flowchart: {
+                            htmlLabels: true,
+                            curve: 'basis',
+                            padding: 15
+                        },
+                        sequence: {
+                            diagramMarginX: 30,
+                            diagramMarginY: 30,
+                            actorMargin: 50,
+                            width: 150,
+                            height: 65,
+                            boxMargin: 10,
+                            boxTextMargin: 8,
+                            noteMargin: 15,
+                            messageMargin: 40
+                        },
+                        gantt: {
+                            leftPadding: 60,
+                            gridLineStartPadding: 30,
+                            fontSize: 12,
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            sectionFontSize: 14,
+                            axisFormat: '%m月',
+                            barHeight: 20,
+                            rightPadding: 20,
+                            topPadding: 50,
+                            bottomPadding: 50,
+                            numberSectionStyles: 3,
+                            useWidth: 800
+                        },
+                        class: {
+                            titleTopMargin: 25
+                        },
+                        state: {
+                            titleTopMargin: 25
+                        },
+                        er: {
+                            diagramPadding: 15,
+                            layoutDirection: 'TB',
+                            minEntityWidth: 120,
+                            minEntityHeight: 80,
+                            entityPadding: 12,
+                            stroke: '#333333',
+                            fill: '#f8f9fa',
+                            fontSize: 13,
+                            useMaxWidth: true,
+                            alignment: 'center'
+                        }
+                    });
+                    
+                    console.log('✅ Mermaid初始化完成，主题:', isDarkMode ? 'dark' : 'default');
+                } else {
+                    console.warn('⚠️ Mermaid未加载');
+                }
+            }
+            
+            // 原生应用通信桥梁
+            class NativeBridge {
+                constructor() {
+                    this.isNativeEnvironment = this.detectNativeEnvironment();
+                    this.setupMessageHandlers();
+                }
+                
+                detectNativeEnvironment() {
+                    // 检测是否在原生WebView环境中
+                    return window.webkit && window.webkit.messageHandlers;
+                }
+                
+                setupMessageHandlers() {
+                    // 监听来自原生应用的消息
+                    window.addEventListener('message', (event) => {
+                        if (event.data && event.data.type === 'themeChanged') {
+                            this.handleNativeThemeChange(event.data.theme);
+                        }
+                    });
+                    
+                    // 暴露给原生调用的全局函数
+                    window.handleNativeThemeChange = (theme) => {
+                        this.handleNativeThemeChange(theme);
+                    };
+                }
+                
+                handleNativeThemeChange(theme) {
+                    console.log('🔄 原生应用主题变化:', theme);
+                    if (window.themeManager) {
+                        // 在原生环境中，强制设置主题（即使是首次初始化）
+                        const isFirstTimeSetup = window.themeManager.currentTheme === null;
+                        window.themeManager.setTheme(theme, false); // 不通知原生，避免循环
+                        if (isFirstTimeSetup) {
+                            console.log('🎨 WebView首次主题初始化完成:', theme);
+                        }
+                    }
+                }
+                
+                notifyNativeThemeChange(theme) {
+                    if (!this.isNativeEnvironment) return;
+                    
+                    try {
+                        // iOS WebKit消息传递
+                        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.themeHandler) {
+                            window.webkit.messageHandlers.themeHandler.postMessage({
+                                type: 'themeChanged',
+                                theme: theme
+                            });
+                        }
+                        
+                        // Android WebView JavascriptInterface
+                        if (window.AndroidInterface && window.AndroidInterface.onThemeChanged) {
+                            window.AndroidInterface.onThemeChanged(theme);
+                        }
+                        
+                        console.log('📱 已通知原生应用主题变化:', theme);
+                    } catch (error) {
+                        console.log('⚠️ 通知原生应用失败:', error);
+                    }
+                }
+            }
+            
+            // 主题管理 - 增强版
             class ThemeManager {
                 constructor() {
+                    this.nativeBridge = new NativeBridge();
                     this.init();
                 }
                 
                 init() {
-                    // 从本地存储获取主题设置
+                    // 在原生环境中，不要立即设置主题，等待原生应用同步主题
+                    if (this.nativeBridge && this.nativeBridge.isNativeEnvironment) {
+                        console.log('🎨 原生环境中，等待主题同步...');
+                        // 原生环境中不设置默认主题，完全等待原生同步
+                        this.currentTheme = null; // 标记为未初始化状态
+                    } else {
+                        // 非原生环境，使用本地存储或系统主题
                     const savedTheme = localStorage.getItem('theme');
                     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                     
-                    // 确定初始主题
                     if (savedTheme) {
-                        this.setTheme(savedTheme);
+                            this.setTheme(savedTheme, false);
                     } else if (systemPrefersDark) {
-                        this.setTheme('dark');
+                            this.setTheme('dark', false);
                     } else {
-                        this.setTheme('light');
+                            this.setTheme('light', false);
+                        }
                     }
                     
-                    // 绑定切换按钮事件
-                    const toggleButton = document.getElementById('theme-toggle');
-                    toggleButton.addEventListener('click', () => this.toggleTheme());
+                    // 主题切换按钮已移除，只保留原生应用控制
                     
                     // 监听系统主题变化
                     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
                         if (!localStorage.getItem('theme')) {
-                            this.setTheme(e.matches ? 'dark' : 'light');
+                            this.setTheme(e.matches ? 'dark' : 'light', true);
                         }
                     });
                 }
                 
-                setTheme(theme) {
+                setInitialTheme() {
+                    // 设置一个临时的默认主题，不保存到localStorage
+                    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    const defaultTheme = systemPrefersDark ? 'dark' : 'light';
+                    
                     const body = document.body;
-                    const toggleButton = document.getElementById('theme-toggle');
+                    
+                    // 移除所有主题类
+                    body.classList.remove('dark-mode', 'light-mode');
+                    
+                    if (defaultTheme === 'dark') {
+                        body.classList.add('dark-mode');
+                    } else {
+                        body.classList.add('light-mode');
+                    }
+                    
+                    this.currentTheme = defaultTheme;
+                    console.log('🎨 临时主题设置:', defaultTheme);
+                }
+                
+                setTheme(theme, notifyNative = true) {
+                    const body = document.body;
                     
                     // 移除所有主题类
                     body.classList.remove('dark-mode', 'light-mode');
                     
                     if (theme === 'dark') {
                         body.classList.add('dark-mode');
-                        toggleButton.textContent = '浅色';
-                        toggleButton.title = '切换到浅色模式';
                     } else {
                         body.classList.add('light-mode');
-                        toggleButton.textContent = '深色';
-                        toggleButton.title = '切换到深色模式';
                     }
                     
-                    // 保存到本地存储
+                    // 只在非原生环境中保存到本地存储
+                    if (!this.nativeBridge || !this.nativeBridge.isNativeEnvironment) {
                     localStorage.setItem('theme', theme);
+                    }
+                    
                     this.currentTheme = theme;
+                    
+                    // 通知原生应用主题变化
+                    if (notifyNative && this.nativeBridge) {
+                        this.nativeBridge.notifyNativeThemeChange(theme);
+                    }
+                    
+                    console.log('🎨 主题已切换到:', theme, notifyNative ? '(已通知原生)' : '(未通知原生)');
                 }
                 
                 toggleTheme() {
                     const newTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
-                    this.setTheme(newTheme);
+                    this.setTheme(newTheme, true); // 用户手动切换时通知原生
+                    
+                    // 重新初始化Mermaid以应用新主题
+                    initMermaid();
+                    
+                    // 重新渲染所有Mermaid图表
+                    renderMermaidDiagrams(document.getElementById('rendered-content'));
                 }
                 
                 getCurrentTheme() {
@@ -599,6 +1845,56 @@
             
             // 初始化主题管理器
             const themeManager = new ThemeManager();
+            
+            // 暴露给全局作用域，方便原生调用
+            window.themeManager = themeManager;
+            
+            // 移动端Mermaid图表响应式优化
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    const mermaidDiagrams = document.querySelectorAll('.mermaid-diagram svg');
+                    mermaidDiagrams.forEach(svg => {
+                        const chartType = svg.getAttribute('data-chart-type');
+                        
+                        if (chartType === 'gantt') {
+                            // 重新优化甘特图
+                            if (window.innerWidth <= 768) {
+                                const tasks = svg.querySelectorAll('.taskText, .sectionTitle');
+                                tasks.forEach(task => {
+                                    task.style.fontSize = window.innerWidth <= 480 ? '11px' : '12px';
+                                });
+                                
+                                const axisLabels = svg.querySelectorAll('.grid .tick text');
+                                axisLabels.forEach(label => {
+                                    label.style.fontSize = window.innerWidth <= 480 ? '10px' : '11px';
+                                });
+                            }
+                        } else if (chartType === 'er') {
+                            // 重新优化实体关系图
+                            if (window.innerWidth <= 768) {
+                                const entityLabels = svg.querySelectorAll('.entityLabel');
+                                entityLabels.forEach(label => {
+                                    label.style.fontSize = window.innerWidth <= 480 ? '12px' : '13px';
+                                });
+                                
+                                const attributeTexts = svg.querySelectorAll('.attributeBoxOdd text, .attributeBoxEven text');
+                                attributeTexts.forEach(text => {
+                                    text.style.fontSize = window.innerWidth <= 480 ? '10px' : '11px';
+                                });
+                                
+                                const relationLabels = svg.querySelectorAll('.relationshipLabel');
+                                relationLabels.forEach(label => {
+                                    label.style.fontSize = window.innerWidth <= 480 ? '9px' : '10px';
+                                });
+                            }
+                        }
+                    });
+                    
+                    console.log('📱 移动端Mermaid图表响应式优化完成');
+                }, 300);
+            });
             
             // 目录管理
             let tocOpen = false;
@@ -1081,12 +2377,481 @@
                 });
             }
             
+            // Mermaid渲染失败备用方案
+            function tryFallbackRender(diagramId, originalCode, processedCode, container, error, index) {
+                console.log(`🔄 尝试Mermaid图表 ${index + 1} 的备用渲染方案`);
+                
+                // 方案1: 尝试使用原始代码渲染（如果修复后的代码失败）
+                if (processedCode !== originalCode.trim()) {
+                    console.log('🔄 尝试使用原始代码渲染');
+                    mermaid.render(`${diagramId}-fallback-1`, originalCode.trim()).then(result => {
+                        container.innerHTML = result.svg;
+                        console.log(`✅ 使用原始代码渲染成功`);
+                        
+                        // 应用移动端优化
+                        applyMobileOptimization(container.querySelector('svg'), originalCode.trim());
+                        
+                    }).catch(fallbackError => {
+                        console.warn('❌ 原始代码渲染也失败:', fallbackError);
+                        
+                        // 方案2: 尝试简化版本
+                        trySimplifiedFallback(diagramId, originalCode, container, error, index);
+                    });
+                } else {
+                    // 直接尝试简化版本
+                    trySimplifiedFallback(diagramId, originalCode, container, error, index);
+                }
+            }
+            
+            // 简化版本备用方案
+            function trySimplifiedFallback(diagramId, originalCode, container, error, index) {
+                console.log(`🔄 尝试简化版本备用方案`);
+                
+                let simplifiedCode = originalCode.trim();
+                
+                // 实体关系图简化
+                if (simplifiedCode.startsWith('erDiagram')) {
+                    simplifiedCode = `
+erDiagram
+    ENTITY_A {
+        string id
+        string name
+    }
+    
+    ENTITY_B {
+        string id
+        string data
+    }
+    
+    ENTITY_A ||--o{ ENTITY_B : contains
+                    `.trim();
+                    
+                    console.log('🔄 使用简化的实体关系图');
+                    
+                // 甘特图简化  
+                } else if (simplifiedCode.startsWith('gantt')) {
+                    simplifiedCode = `
+gantt
+    title 简化时间线
+    dateFormat YYYY-MM-DD
+    
+    section 阶段
+    任务A : done, 2024-01-01, 30d
+    任务B : active, 2024-02-01, 30d
+                    `.trim();
+                    
+                    console.log('🔄 使用简化的甘特图');
+                    
+                // 其他图表类型的简化处理
+                } else {
+                    console.log('🔄 图表类型不支持简化，显示错误信息');
+                    showErrorMessage(container, error, originalCode, index);
+                    return;
+                }
+                
+                // 尝试渲染简化版本
+                mermaid.render(`${diagramId}-simplified`, simplifiedCode).then(result => {
+                    container.innerHTML = `
+                        <div style="margin-bottom: 12px; padding: 8px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; font-size: 13px; color: #856404;">
+                            ⚠️ 原始图表渲染失败，显示简化版本
+                        </div>
+                        ${result.svg}
+                    `;
+                    
+                    console.log(`✅ 简化版本渲染成功`);
+                    
+                    // 应用移动端优化
+                    applyMobileOptimization(container.querySelector('svg'), simplifiedCode);
+                    
+                }).catch(simplifiedError => {
+                    console.error('❌ 简化版本渲染也失败:', simplifiedError);
+                    showErrorMessage(container, error, originalCode, index);
+                });
+            }
+            
+            // 应用移动端优化到SVG
+            function applyMobileOptimization(svg, code) {
+                if (!svg) return;
+                
+                svg.style.maxWidth = '100%';
+                svg.style.height = 'auto';
+                svg.style.touchAction = 'pan-x pan-y';
+                
+                const isGantt = code.trim().startsWith('gantt');
+                const isER = code.trim().startsWith('erDiagram');
+                
+                if (isGantt) {
+                    svg.setAttribute('data-chart-type', 'gantt');
+                } else if (isER) {
+                    svg.setAttribute('data-chart-type', 'er');
+                }
+            }
+            
+            // 显示错误信息
+            function showErrorMessage(container, error, originalCode, index) {
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                
+                container.innerHTML = `
+                    <div style="
+                        color: #d73a49; 
+                        background-color: ${isDarkMode ? '#2d1b1f' : '#ffeef0'}; 
+                        border: 1px solid ${isDarkMode ? '#8b5862' : '#fdaeb7'}; 
+                        border-radius: 6px; 
+                        padding: 16px; 
+                        font-family: inherit;
+                        font-size: 14px;
+                        margin: 20px 0;
+                    ">
+                        <strong>📊 Mermaid图表渲染失败</strong><br>
+                        <div style="margin: 8px 0; font-size: 13px; color: ${isDarkMode ? '#ff7979' : '#d73a49'};">
+                            错误: ${error.message || '未知语法错误'}
+                        </div>
+                        
+                        <div style="margin: 12px 0; padding: 8px; background: ${isDarkMode ? '#1a1a1a' : '#f8f9fa'}; border-radius: 4px; font-size: 12px; color: ${isDarkMode ? '#e1e4e8' : '#586069'};">
+                            💡 <strong>可能的解决方案:</strong><br>
+                            • 检查实体关系图的属性定义语法<br>
+                            • 使用 <code>string field_name</code> 格式定义字段<br>
+                            • 避免使用 PK、FK 等关键字<br>
+                            • 确保关系语法正确: <code>ENTITY_A ||--o{ ENTITY_B : relationship</code>
+                        </div>
+                        
+                        <details style="margin-top: 12px;">
+                            <summary style="cursor: pointer; color: ${isDarkMode ? '#58a6ff' : '#0366d6'}; font-weight: 500;">
+                                📝 查看原始代码
+                            </summary>
+                            <pre style="
+                                margin-top: 8px; 
+                                background: ${isDarkMode ? '#161b22' : '#f6f8fa'}; 
+                                color: ${isDarkMode ? '#e1e4e8' : '#24292e'};
+                                padding: 12px; 
+                                border-radius: 4px; 
+                                overflow-x: auto;
+                                font-size: 12px;
+                                border: 1px solid ${isDarkMode ? '#30363d' : '#d1d5da'};
+                            ">${originalCode}</pre>
+                        </details>
+                        
+                        <div style="margin-top: 12px; font-size: 12px; color: ${isDarkMode ? '#8b949e' : '#6a737d'};">
+                            🔧 系统已尝试自动修复语法，但仍然失败。请检查图表语法是否正确。
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Mermaid语法兼容性修复函数
+            function fixMermaidCompatibility(code) {
+                let fixedCode = code.trim();
+                
+                try {
+                    // 检测实体关系图并修复常见问题
+                    if (fixedCode.startsWith('erDiagram')) {
+                        console.log('🔧 检测到实体关系图，应用兼容性修复');
+                        
+                        // 修复属性定义中的PK/FK问题
+                        fixedCode = fixedCode.replace(/(\w+)\s+PK\s*$/gm, 'string $1')
+                                           .replace(/(\w+)\s+FK\s*$/gm, 'string $1')
+                                           .replace(/(\w+)\s+PK\s+/gm, 'string $1 ')
+                                           .replace(/(\w+)\s+FK\s+/gm, 'string $1 ');
+                        
+                        // 修复没有类型声明的属性
+                        const lines = fixedCode.split('\n');
+                        let inEntity = false;
+                        let fixedLines = [];
+                        
+                        for (let line of lines) {
+                            const trimmedLine = line.trim();
+                            
+                            if (trimmedLine.includes('{')) {
+                                inEntity = true;
+                                fixedLines.push(line);
+                            } else if (trimmedLine.includes('}')) {
+                                inEntity = false;
+                                fixedLines.push(line);
+                            } else if (inEntity && trimmedLine && !trimmedLine.includes('--') && !trimmedLine.includes(':')) {
+                                // 这是一个属性行，检查是否需要添加类型
+                                if (!trimmedLine.includes('string ') && !trimmedLine.includes('int ') && !trimmedLine.includes('boolean ')) {
+                                    fixedLines.push(`        string ${trimmedLine}`);
+                                } else {
+                                    fixedLines.push(line);
+                                }
+                            } else {
+                                fixedLines.push(line);
+                            }
+                        }
+                        
+                        fixedCode = fixedLines.join('\n');
+                        
+                        // 修复关系语法兼容性
+                        fixedCode = fixedCode.replace(/(\w+)\s*\}o--\|\|\s*(\w+)\s*:\s*(.+)/g, '$1 ||--o{ $2 : $3')
+                                           .replace(/(\w+)\s*\|\|--o\}\s*(\w+)\s*:\s*(.+)/g, '$1 ||--o{ $2 : $3')
+                                           .replace(/(\w+)\s*--\>\s*(\w+)\s*:\s*(.+)/g, '$1 ||--o{ $2 : $3')
+                                           .replace(/(\w+)\s*\<--\s*(\w+)\s*:\s*(.+)/g, '$2 ||--o{ $1 : $3');
+                        
+                        // 修复中文关系标签和特殊字符
+                        fixedCode = fixedCode.replace(/:\s*["']([^"']*["'][^"']*["'][^"']*)["']/g, ': contains')
+                                           .replace(/:\s*["']?属于["']?/g, ': belongs_to')
+                                           .replace(/:\s*["']?包含["']?/g, ': contains')
+                                           .replace(/:\s*["']?拥有["']?/g, ': has')
+                                           .replace(/:\s*["']?关联["']?/g, ': relates_to')
+                                           .replace(/:\s*["']?引用["']?/g, ': references');
+                        
+                        console.log('✅ 实体关系图语法修复完成');
+                    }
+                    
+                    // 检测甘特图并修复常见问题
+                    if (fixedCode.startsWith('gantt')) {
+                        console.log('🔧 检测到甘特图，应用兼容性修复');
+                        
+                        // 确保正确的日期格式
+                        if (!fixedCode.includes('dateFormat')) {
+                            fixedCode = fixedCode.replace('gantt', 'gantt\n    dateFormat YYYY-MM-DD');
+                        }
+                        
+                        // 修复轴格式
+                        fixedCode = fixedCode.replace(/axisFormat\s+['"]?%m\/%d['"]?/g, 'axisFormat %m月');
+                        
+                        console.log('✅ 甘特图语法修复完成');
+                    }
+                    
+                    // 通用修复：移除不支持的classDef
+                    fixedCode = fixedCode.replace(/classDef\s+\w+\s+[^;]+;?\s*/g, '');
+                    
+                    // 通用修复：移除不支持的class应用
+                    fixedCode = fixedCode.replace(/class\s+[\w,\s]+\s+\w+\s*/g, '');
+                    
+                    if (fixedCode !== code.trim()) {
+                        console.log('🔧 Mermaid代码已修复');
+                        console.log('📝 原始代码:', code.substring(0, 100) + (code.length > 100 ? '...' : ''));
+                        console.log('🔧 修复后:', fixedCode.substring(0, 100) + (fixedCode.length > 100 ? '...' : ''));
+                        console.log('📊 长度变化:', code.length, '->', fixedCode.length);
+                    }
+                    
+                } catch (error) {
+                    console.warn('⚠️ Mermaid语法修复过程中出现错误:', error);
+                    return code.trim(); // 返回原始代码
+                }
+                
+                return fixedCode;
+            }
+            
+            // 处理Mermaid图表
+            function renderMermaidDiagrams(element) {
+                if (typeof mermaid === 'undefined') {
+                    console.warn('⚠️ Mermaid未加载，跳过图表渲染');
+                    return;
+                }
+                
+                const mermaidBlocks = element.querySelectorAll('pre code.language-mermaid');
+                console.log(`🎨 发现 ${mermaidBlocks.length} 个Mermaid图表`);
+                
+                mermaidBlocks.forEach((code, index) => {
+                    // 避免重复处理
+                    if (code.dataset.mermaidProcessed) {
+                        return;
+                    }
+                    
+                    const pre = code.parentElement;
+                    const mermaidCode = code.textContent.trim();
+                    
+                    if (!mermaidCode) {
+                        console.warn(`⚠️ Mermaid图表 ${index + 1} 内容为空`);
+                        return;
+                    }
+                    
+                    console.log(`🎨 渲染Mermaid图表 ${index + 1}:`, mermaidCode.substring(0, 50) + '...');
+                    
+                    // 预处理Mermaid代码，修复兼容性问题
+                    let processedCode = fixMermaidCompatibility(mermaidCode);
+                    
+                    // 创建Mermaid容器
+                    const mermaidDiv = document.createElement('div');
+                    mermaidDiv.className = 'mermaid-diagram';
+                    mermaidDiv.style.cssText = `
+                        margin: 20px 0;
+                        text-align: center;
+                        background-color: transparent;
+                        border-radius: 8px;
+                        padding: 20px;
+                        overflow-x: auto;
+                        border: 1px solid #e1e4e8;
+                    `;
+                    
+                    // 为移动端优化
+                    const isDarkMode = document.body.classList.contains('dark-mode');
+                    if (isDarkMode) {
+                        mermaidDiv.style.borderColor = '#30363d';
+                        mermaidDiv.style.backgroundColor = 'rgba(22, 27, 34, 0.5)';
+                    }
+                    
+                    // 生成唯一ID
+                    const diagramId = `mermaid-diagram-${Date.now()}-${index}`;
+                    
+                    try {
+                        // 使用mermaid.render渲染图表
+                        mermaid.render(diagramId, processedCode).then(result => {
+                            mermaidDiv.innerHTML = result.svg;
+                            
+                            // 优化SVG样式
+                            const svg = mermaidDiv.querySelector('svg');
+                            if (svg) {
+                                svg.style.maxWidth = '100%';
+                                svg.style.height = 'auto';
+                                
+                                // 移动端触摸优化
+                                svg.style.touchAction = 'pan-x pan-y';
+                                
+                                // 检测图表类型并应用特定优化
+                                const isGantt = processedCode.trim().startsWith('gantt');
+                                const isER = processedCode.trim().startsWith('erDiagram');
+                                
+                                if (isGantt) {
+                                    console.log(`🗓️ 应用甘特图移动端优化`);
+                                    // 甘特图特殊优化
+                                    svg.setAttribute('data-chart-type', 'gantt');
+                                    
+                                    // 移动端屏幕宽度检测
+                                    if (window.innerWidth <= 768) {
+                                        // 调整甘特图在移动端的显示
+                                        const tasks = svg.querySelectorAll('.taskText, .sectionTitle');
+                                        tasks.forEach(task => {
+                                            task.style.fontSize = window.innerWidth <= 480 ? '11px' : '12px';
+                                        });
+                                        
+                                        // 调整时间轴标签
+                                        const axisLabels = svg.querySelectorAll('.grid .tick text');
+                                        axisLabels.forEach(label => {
+                                            label.style.fontSize = window.innerWidth <= 480 ? '10px' : '11px';
+                                        });
+                                    }
+                                    
+                                    // 设置甘特图容器的特殊样式
+                                    mermaidDiv.style.overflowX = 'auto';
+                                    mermaidDiv.style.WebkitOverflowScrolling = 'touch';
+                                    
+                                } else if (isER) {
+                                    console.log(`🗃️ 应用实体关系图移动端优化`);
+                                    // 实体关系图特殊优化
+                                    svg.setAttribute('data-chart-type', 'er');
+                                    
+                                    // 移动端优化
+                                    if (window.innerWidth <= 768) {
+                                        // 调整实体标签字体
+                                        const entityLabels = svg.querySelectorAll('.entityLabel');
+                                        entityLabels.forEach(label => {
+                                            label.style.fontSize = window.innerWidth <= 480 ? '12px' : '13px';
+                                        });
+                                        
+                                        // 调整属性文本
+                                        const attributeTexts = svg.querySelectorAll('.attributeBoxOdd text, .attributeBoxEven text');
+                                        attributeTexts.forEach(text => {
+                                            text.style.fontSize = window.innerWidth <= 480 ? '10px' : '11px';
+                                        });
+                                        
+                                        // 调整关系标签
+                                        const relationLabels = svg.querySelectorAll('.relationshipLabel');
+                                        relationLabels.forEach(label => {
+                                            label.style.fontSize = window.innerWidth <= 480 ? '9px' : '10px';
+                                        });
+                                    }
+                                    
+                                    // 优化实体关系图的垂直布局
+                                    mermaidDiv.style.minHeight = 'auto';
+                                }
+                                
+                                // 通用移动端优化
+                                if (window.innerWidth <= 768) {
+                                    // 添加缩放提示（仅在超宽图表时）
+                                    const svgWidth = svg.getBBox ? svg.getBBox().width : svg.viewBox.baseVal.width;
+                                    if (svgWidth > window.innerWidth - 40) {
+                                        const zoomHint = document.createElement('div');
+                                        zoomHint.style.cssText = `
+                                            font-size: 12px;
+                                            color: #6b7280;
+                                            text-align: center;
+                                            margin-top: 8px;
+                                            padding: 4px 8px;
+                                            background: rgba(107, 114, 128, 0.1);
+                                            border-radius: 4px;
+                                        `;
+                                        
+                                    }
+                                }
+                                
+                                console.log(`✅ Mermaid图表 ${index + 1} 渲染成功`);
+                            }
+                            
+                            // 标记为已处理
+                            code.dataset.mermaidProcessed = 'true';
+                            
+                        }).catch(error => {
+                            console.error(`❌ Mermaid图表 ${index + 1} 渲染失败:`, error);
+                            
+                            // 尝试备用渲染方案
+                            tryFallbackRender(diagramId, mermaidCode, processedCode, mermaidDiv, error, index);
+                        });
+                        
+                    } catch (error) {
+                        console.error(`❌ Mermaid图表 ${index + 1} 处理异常:`, error);
+                        showErrorMessage(mermaidDiv, error, mermaidCode, index);
+                    }
+                    
+                    // 替换原始代码块
+                    pre.parentNode.replaceChild(mermaidDiv, pre);
+                });
+            }
+            
+            // 简化HTML处理，专注于基本移动端适配
+            function enhanceHTMLElements(element) {
+                // 保护LaTeX元素，避免被处理干扰
+                const mathElements = element.querySelectorAll('script[type="math/tex"], .MathJax, .MathJax_Display');
+                mathElements.forEach(el => {
+                    el.setAttribute('data-latex-protected', 'true');
+                });
+                
+                // 基本移动端适配
+                const htmlElements = element.querySelectorAll('div, span, section, article, aside, header, footer, nav');
+                htmlElements.forEach(el => {
+                    // 跳过LaTeX保护的元素
+                    if (el.getAttribute('data-latex-protected') || 
+                        el.closest('[data-latex-protected]') ||
+                        el.classList.contains('MathJax') ||
+                        el.classList.contains('MathJax_Display')) {
+                        return;
+                    }
+                    
+                    // 基本移动端适配
+                    if (!el.style.maxWidth) {
+                        el.style.maxWidth = '100%';
+                    }
+                });
+                
+                console.log('🏷️ 基本HTML适配完成');
+            }
+            
             // 渲染函数
             function renderMarkdown(markdownText) {
                 try {
                     // 直接渲染完整的Markdown内容
                     text = markdownText;
-                    const html = marked.parse(text);
+                    
+                    // 预处理markdown文本，确保HTML被正确识别
+                    let processedText = text;
+                    
+                    // 确保text是字符串类型
+                    if (typeof text !== 'string') {
+                        console.error('❌ 输入的markdown文本不是字符串类型:', typeof text);
+                        return;
+                    }
+                    
+                    // 检测iOS WebView环境
+                    const isIOSWebView = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    
+                    if (isIOSWebView && processedText) {
+                        console.log('🍎 检测到iOS WebView环境');
+                        // 简化处理，专注于核心渲染功能
+                    }
+                    
+                    const html = marked.parse(processedText);
                     const contentElement = document.getElementById('rendered-content');
                     
                     if (!contentElement) {
@@ -1095,6 +2860,11 @@
                     }
                     
                     contentElement.innerHTML = html;
+                    
+                    // iOS WebView基本处理
+                    if (isIOSWebView) {
+                        console.log('🍎 iOS WebView环境已优化');
+                    }
                     
                     // 使用requestAnimationFrame确保DOM更新后再处理增强功能
                     requestAnimationFrame(() => {
@@ -1117,34 +2887,52 @@
                             console.log('☑️ 处理任务列表功能');
                             enhanceTaskLists(contentElement);
                             
+                            // 处理Mermaid图表
+                            console.log('🎨 处理Mermaid图表');
+                            renderMermaidDiagrams(contentElement);
+                            
+                            // 优化移动端表格显示
+                            console.log('📱 优化移动端表格');
+                            optimizeTablesForMobile(contentElement);
+                            
+                            // 优化HTML元素显示
+                            console.log('🏷️ 优化HTML元素');
+                            enhanceHTMLElements(contentElement);
+                            
                             // 生成目录
                             console.log('📑 生成目录');
                             generateTOC();
                             
                             console.log('✅ 所有增强功能处理完成');
+                            
+                            // 在所有增强功能完成后渲染数学公式
+                            setTimeout(() => {
+                                console.log('🧮 开始渲染LaTeX公式');
+                                if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+                                    MathJax.typesetPromise([contentElement])
+                        .then(() => {
+                                            console.log('✅ LaTeX渲染完成');
+                        })
+                        .catch((err) => {
+                                            console.error('❌ LaTeX渲染错误:', err);
+                                        });
+                                } else {
+                                    console.warn('⚠️ MathJax未加载或不支持typesetPromise');
+                                }
+                            }, 200); // 给DOM足够时间稳定
+                            
                         } catch (error) {
                             console.error('❌ 增强功能处理错误:', error);
                         }
-                    });
-                    
-                    // 渲染数学公式
-                    if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
-                        MathJax.typesetPromise([contentElement])
-                            .then(() => {
-                                console.log('MathJax渲染完成');
-                            })
-                            .catch((err) => {
-                                console.error('MathJax渲染错误:', err);
-                            });
-                    }
+                        });
                         
                 } catch (error) {
                     console.error('Markdown渲染错误:', error);
                     const contentElement = document.getElementById('rendered-content');
                     if (contentElement) {
                         contentElement.innerHTML = 
-                            '<div style="color: red; padding: 20px;">渲染错误: ' + error.message + '</div>';
-                    }
+                        '<div style="color: red; padding: 20px;">渲染错误: ' + error.message + '</div>';
+                }
                 }
             }
             
@@ -1185,6 +2973,9 @@
                     // 初始化目录功能
                     initTOC();
                     
+                    // 初始化Mermaid
+                    initMermaid();
+                    
                     // 检查viewport设置（移动端优化提醒）
                     const viewport = document.querySelector('meta[name="viewport"]');
                     if (!viewport || !viewport.content.includes('width=device-width')) {
@@ -1206,8 +2997,100 @@
                 }
             });
             
+            // 优化移动端表格显示
+            function optimizeTablesForMobile(element) {
+                const tables = element.querySelectorAll('table');
+                tables.forEach(table => {
+                    // 检查表格是否已经被包装过
+                    if (table.parentElement.classList.contains('table-container')) {
+                        return;
+                    }
+                    
+                    // 创建包装容器
+                    const container = document.createElement('div');
+                    container.className = 'table-container';
+                    
+                    // 插入容器并移动表格
+                    table.parentNode.insertBefore(container, table);
+                    container.appendChild(table);
+                    
+                    // 添加移动端优化标识
+                    table.setAttribute('data-mobile-optimized', 'true');
+                    
+                    console.log('📱 已优化表格:', table);
+                });
+            }
+            
+            // 核心功能调试
+            function debugRendering() {
+                const contentElement = document.getElementById('rendered-content');
+                if (!contentElement) return;
+                
+                console.log('🔍 渲染调试信息:');
+                console.log('📱 环境:', /iPad|iPhone|iPod/.test(navigator.userAgent) ? 'iOS WebView' : '其他');
+                console.log('🧮 MathJax:', typeof MathJax !== 'undefined' ? '已加载' : '未加载');
+                console.log('🎨 Mermaid:', typeof mermaid !== 'undefined' ? '已加载' : '未加载');
+                
+                const mathElements = contentElement.querySelectorAll('.MathJax, .MathJax_Display');
+                const mermaidElements = contentElement.querySelectorAll('.mermaid-diagram');
+                
+                console.log(`🧮 LaTeX元素: ${mathElements.length}`);
+                console.log(`🎨 Mermaid图表: ${mermaidElements.length}`);
+                
+                return {
+                    environment: /iPad|iPhone|iPod/.test(navigator.userAgent) ? 'iOS WebView' : '其他',
+                    mathJaxLoaded: typeof MathJax !== 'undefined',
+                    mermaidLoaded: typeof mermaid !== 'undefined',
+                    mathElements: mathElements.length,
+                    mermaidElements: mermaidElements.length
+                };
+            }
+            
+            // LaTeX调试函数 - 帮助诊断LaTeX渲染问题
+            function debugLaTeXRendering() {
+                const contentElement = document.getElementById('rendered-content');
+                if (!contentElement) return;
+                
+                console.log('🧮 LaTeX渲染调试信息:');
+                console.log('📱 MathJax版本:', typeof MathJax !== 'undefined' ? MathJax.version : '未加载');
+                console.log('🔧 MathJax配置:', typeof MathJax !== 'undefined' ? MathJax.config : '未配置');
+                
+                // 检查LaTeX公式元素
+                const mathElements = contentElement.querySelectorAll('.MathJax, .MathJax_Display, script[type="math/tex"]');
+                console.log(`🧮 发现 ${mathElements.length} 个LaTeX元素:`);
+                
+                mathElements.forEach((el, index) => {
+                    console.log(`LaTeX元素 ${index + 1}:`, {
+                        tagName: el.tagName,
+                        className: el.className,
+                        type: el.getAttribute('type'),
+                        innerHTML: el.innerHTML.substring(0, 100) + '...',
+                        isProtected: el.getAttribute('data-latex-protected')
+                    });
+                });
+                
+                // 检查原始文本中的LaTeX语法
+                const allText = contentElement.textContent;
+                const dollarMatches = (allText.match(/\$/g) || []).length;
+                const backslashMatches = (allText.match(/\\\(/g) || []).length + (allText.match(/\\\[/g) || []).length;
+                
+                console.log('📝 LaTeX语法统计:', {
+                    dollarSigns: dollarMatches,
+                    backslashNotation: backslashMatches,
+                    possibleFormulas: Math.floor(dollarMatches / 2) + backslashMatches
+                });
+                
+                return {
+                    mathElementsCount: mathElements.length,
+                    mathJaxLoaded: typeof MathJax !== 'undefined',
+                    possibleFormulas: Math.floor(dollarMatches / 2) + backslashMatches
+                };
+            }
+            
             // 暴露给客户端调用
             window.renderMarkdown = renderMarkdown;
+            window.debugRendering = debugRendering;
+            window.debugLaTeXRendering = debugLaTeXRendering;
         </script>
         
     </body>

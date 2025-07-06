@@ -20,6 +20,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         
+        // 初始化主题管理器
+        initializeThemeManager()
+        
         // 初始化文件系统
         initializeFileSystem()
         
@@ -27,6 +30,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         performColdStartSync()
         
         return true
+    }
+    
+    // MARK: - 主题管理器初始化
+    
+    /// 初始化主题管理器
+    private func initializeThemeManager() {
+        // 获取主题管理器实例并触发初始化
+        let _ = ThemeManager.shared
+        print("🎨 App启动时主题管理器已初始化")
     }
     
     // MARK: - 文件系统初始化

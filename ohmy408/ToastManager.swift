@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import SnapKit
 
 /// Toast类型枚举
 enum ToastType {
@@ -156,21 +157,19 @@ class ToastManager {
     ///   - view: 父视图
     ///   - position: 显示位置
     private func setupToastConstraints(toast: ToastView, in view: UIView, position: ToastPosition) {
-        toast.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            toast.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            toast.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
-            toast.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -20)
-        ])
-        
-        switch position {
-        case .top:
-            toast.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: position.offset).isActive = true
-        case .center:
-            toast.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: position.offset).isActive = true
-        case .bottom:
-            toast.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: position.offset).isActive = true
+        toast.snp.makeConstraints { make in
+            make.centerX.equalTo(view)
+            make.leading.greaterThanOrEqualTo(view).offset(20)
+            make.trailing.lessThanOrEqualTo(view).offset(-20)
+            
+            switch position {
+            case .top:
+                make.top.equalTo(view.safeAreaLayoutGuide.snp.top).offset(position.offset)
+            case .center:
+                make.centerY.equalTo(view).offset(position.offset)
+            case .bottom:
+                make.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom).offset(position.offset)
+            }
         }
     }
     
@@ -254,32 +253,22 @@ private class ToastView: UIView {
     }
     
     private func setupConstraints() {
-        containerView.translatesAutoresizingMaskIntoConstraints = false
-        iconImageView.translatesAutoresizingMaskIntoConstraints = false
-        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        containerView.snp.makeConstraints { make in
+            make.edges.equalTo(self)
+            make.height.greaterThanOrEqualTo(44)
+        }
         
-        NSLayoutConstraint.activate([
-            // 容器约束
-            containerView.topAnchor.constraint(equalTo: topAnchor),
-            containerView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            containerView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            
-            // 图标约束
-            iconImageView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            iconImageView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 20),
-            iconImageView.heightAnchor.constraint(equalToConstant: 20),
-            
-            // 消息约束
-            messageLabel.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 12),
-            messageLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            messageLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
-            messageLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12),
-            
-            // 最小高度
-            containerView.heightAnchor.constraint(greaterThanOrEqualToConstant: 44)
-        ])
+        iconImageView.snp.makeConstraints { make in
+            make.leading.equalTo(containerView).offset(16)
+            make.centerY.equalTo(containerView)
+            make.size.equalTo(20)
+        }
+        
+        messageLabel.snp.makeConstraints { make in
+            make.leading.equalTo(iconImageView.snp.trailing).offset(12)
+            make.trailing.equalTo(containerView).offset(-16)
+            make.top.bottom.equalTo(containerView).inset(12)
+        }
     }
 }
 

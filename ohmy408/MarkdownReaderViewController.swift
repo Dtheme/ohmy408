@@ -7,6 +7,7 @@
 
 import UIKit
 import WebKit
+import SnapKit
 import Network
 
 /// Markdown阅读器视图控制器 - 负责渲染和显示Markdown内容
@@ -126,15 +127,15 @@ class MarkdownReaderViewController: UIViewController {
         stackView.alignment = .center
         
         view.addSubview(stackView)
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            stackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            stackView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            stackView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 32),
-            stackView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32),
-            imageView.widthAnchor.constraint(equalToConstant: 50),
-            imageView.heightAnchor.constraint(equalToConstant: 50)
-        ])
+        stackView.snp.makeConstraints { make in
+            make.center.equalTo(view)
+            make.leading.greaterThanOrEqualTo(view).offset(32)
+            make.trailing.lessThanOrEqualTo(view).offset(-32)
+        }
+        
+        imageView.snp.makeConstraints { make in
+            make.size.equalTo(50)
+        }
         
         return view
     }()
@@ -148,6 +149,8 @@ class MarkdownReaderViewController: UIViewController {
     private let maxRetryCount: Int = 10
     private var pendingMarkdownContent: String?
     private var isTemplateLoading: Bool = false
+    private var themeInitRetryCount: Int = 0
+    private let maxThemeInitRetryCount: Int = 3
     
     // MARK: - 生命周期
     override func viewDidLoad() {
@@ -155,6 +158,9 @@ class MarkdownReaderViewController: UIViewController {
         setupUI()
         setupNetworkMonitoring()
         updateTitle()
+        
+        // 设置主题管理器
+        setupThemeManager()
         
         // 延迟加载HTML模板，确保UI完全设置完成
         DispatchQueue.main.async {
@@ -173,8 +179,19 @@ class MarkdownReaderViewController: UIViewController {
         }
     }
     
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        // 移除通知观察者
+        NotificationCenter.default.removeObserver(self, name: ThemeManager.themeDidChangeNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: Notification.Name("UpdateThemeButtonNotification"), object: nil)
+    }
+    
     deinit {
         networkMonitor?.cancel()
+        
+        // 确保移除所有通知观察者
+        NotificationCenter.default.removeObserver(self)
     }
     
     // MARK: - UI设置
@@ -189,53 +206,64 @@ class MarkdownReaderViewController: UIViewController {
         
         // 设置WebView
         view.addSubview(webView)
-        webView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
+        webView.snp.makeConstraints { make in
+            make.top.equalTo(view.safeAreaLayoutGuide.snp.top)
+            make.leading.trailing.bottom.equalTo(view)
+        }
         
         // 设置加载指示器和相关组件
         view.addSubview(loadingIndicator)
         view.addSubview(loadingLabel)
         view.addSubview(progressView)
         
-        loadingIndicator.translatesAutoresizingMaskIntoConstraints = false
-        loadingLabel.translatesAutoresizingMaskIntoConstraints = false
-        progressView.translatesAutoresizingMaskIntoConstraints = false
+        loadingIndicator.snp.makeConstraints { make in
+            make.centerX.equalTo(view)
+            make.centerY.equalTo(view).offset(-30)
+        }
         
-        NSLayoutConstraint.activate([
-            loadingIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            loadingIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -30),
-            
-            loadingLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            loadingLabel.topAnchor.constraint(equalTo: loadingIndicator.bottomAnchor, constant: 16),
-            
-            progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            progressView.topAnchor.constraint(equalTo: loadingLabel.bottomAnchor, constant: 16),
-            progressView.widthAnchor.constraint(equalToConstant: 200)
-        ])
+        loadingLabel.snp.makeConstraints { make in
+            make.centerX.equalTo(view)
+            make.top.equalTo(loadingIndicator.snp.bottom).offset(16)
+        }
+        
+        progressView.snp.makeConstraints { make in
+            make.centerX.equalTo(view)
+            make.top.equalTo(loadingLabel.snp.bottom).offset(16)
+            make.width.equalTo(200)
+        }
         
         // 设置错误视图
         view.addSubview(errorView)
-        errorView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            errorView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            errorView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            errorView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            errorView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
+        errorView.snp.makeConstraints { make in
+            make.top.equalTo(view.safeAreaLayoutGuide.snp.top)
+            make.leading.trailing.bottom.equalTo(view)
+        }
     }
     
     private func setupNavigationButtons() {
+        // 创建返回按钮
+        let backButton = UIBarButtonItem(
+            image: UIImage(systemName: "chevron.left"),
+            style: .plain,
+            target: self,
+            action: #selector(backButtonTapped)
+        )
+        backButton.tintColor = .systemOrange
+        
+        // 隐藏系统默认的返回按钮
+        navigationItem.hidesBackButton = true
+        navigationItem.leftBarButtonItem = backButton
+        
+        // 创建主题切换按钮
+        let themeButton = ThemeManager.shared.createThemeToggleButton()
+        
         let shareButton = UIBarButtonItem(
             image: UIImage(systemName: "square.and.arrow.up"),
             style: .plain,
             target: self,
             action: #selector(shareContent)
         )
+        shareButton.tintColor = .systemOrange
         
         let refreshButton = UIBarButtonItem(
             image: UIImage(systemName: "arrow.clockwise"),
@@ -243,8 +271,34 @@ class MarkdownReaderViewController: UIViewController {
             target: self,
             action: #selector(refreshButtonTapped)
         )
+        refreshButton.tintColor = .systemOrange
         
-        navigationItem.rightBarButtonItems = [shareButton, refreshButton]
+        // 主题按钮放在最左边
+        navigationItem.rightBarButtonItems = [themeButton, shareButton, refreshButton]
+    }
+    
+    private func setupThemeManager() {
+        // 设置WebView引用到主题管理器
+        ThemeManager.shared.setWebView(webView)
+        
+        // 监听主题变化
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(themeDidChange),
+            name: ThemeManager.themeDidChangeNotification,
+            object: nil
+        )
+        
+        // 监听主题按钮更新通知
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("UpdateThemeButtonNotification"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.updateThemeButton()
+        }
+        
+        print("🎨 主题管理器已设置")
     }
     
     private func updateTitle() {
@@ -287,6 +341,7 @@ class MarkdownReaderViewController: UIViewController {
         
         print("🔄 开始加载HTML模板")
         isTemplateLoading = true
+        themeInitRetryCount = 0 // 重置主题初始化重试计数器
         showLoadingState(message: "正在加载渲染器...", progress: 0.1)
         
         let request = URLRequest(url: htmlURL)
@@ -588,14 +643,18 @@ class MarkdownReaderViewController: UIViewController {
     }
     
     // MARK: - 按钮事件
+    @objc private func backButtonTapped() {
+        navigationController?.popViewController(animated: true)
+    }
+    
     @objc private func shareContent() {
         guard let file = markdownFile else { return }
         
         let activityVC = UIActivityViewController(activityItems: [file.url], applicationActivities: nil)
         
-        // iPad支持
+        // iPad支持 - 现在是第二个按钮（分享按钮）
         if let popover = activityVC.popoverPresentationController {
-            popover.barButtonItem = navigationItem.rightBarButtonItems?.first
+            popover.barButtonItem = navigationItem.rightBarButtonItems?[1]
         }
         
         present(activityVC, animated: true)
@@ -618,6 +677,7 @@ class MarkdownReaderViewController: UIViewController {
         isHTMLTemplateLoaded = false
         isTemplateLoading = false
         retryCount = 0
+        themeInitRetryCount = 0 // 重置主题初始化重试计数器
         
         // 保存当前内容作为待渲染内容
         if !markdownContent.isEmpty {
@@ -627,6 +687,146 @@ class MarkdownReaderViewController: UIViewController {
         
         showLoadingState(message: "正在刷新...", progress: 0.0)
         loadHTMLTemplate()
+    }
+    
+    // MARK: - 主题管理事件
+    @objc private func themeDidChange(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let theme = userInfo["theme"] as? UIUserInterfaceStyle else {
+            return
+        }
+        
+        print("🎨 主题已变化为: \(theme == .dark ? "深色" : "浅色")")
+        
+        // 处理主题变化后的额外逻辑
+        updateUIForTheme(theme)
+        
+        // 同步主题到WebView（如果不是从WebView发起的变化）
+        syncThemeToWebView(theme)
+    }
+    
+    private func syncThemeToWebView(_ theme: UIUserInterfaceStyle) {
+        guard isHTMLTemplateLoaded else {
+            print("⚠️ WebView未加载完成，跳过主题同步")
+            return
+        }
+        
+        let themeString = (theme == .dark) ? "dark" : "light"
+        
+        // 使用handleNativeThemeChange函数，这个函数不会反向通知原生应用
+        let syncScript = """
+            (function() {
+                try {
+                    console.log('🔄 原生->WebView主题同步: \(themeString)');
+                    if (window.handleNativeThemeChange && typeof window.handleNativeThemeChange === 'function') {
+                        window.handleNativeThemeChange('\(themeString)');
+                        console.log('✅ WebView主题同步成功');
+                        return true;
+                    } else {
+                        console.warn('⚠️ WebView handleNativeThemeChange函数未准备好');
+                        return false;
+                    }
+                } catch(e) {
+                    console.error('❌ WebView主题同步失败:', e.message);
+                    return false;
+                }
+            })();
+        """
+        
+        webView.evaluateJavaScript(syncScript) { result, error in
+            if let error = error {
+                print("❌ WebView主题同步失败: \(error)")
+            } else if let success = result as? Bool, success {
+                print("✅ WebView主题已同步: \(themeString)")
+            } else {
+                print("⚠️ WebView主题同步结果未知")
+            }
+        }
+    }
+    
+    private func updateUIForTheme(_ theme: UIUserInterfaceStyle) {
+        // 更新视图控制器的UI以匹配主题
+        // 大部分UI会自动适配，这里处理特殊情况
+        
+        // 更新加载指示器颜色
+        loadingIndicator.color = UIColor.systemBlue
+        
+        // 更新WebView背景色
+        webView.backgroundColor = UIColor.systemBackground
+        
+        print("✅ UI已更新以匹配主题: \(theme == .dark ? "深色" : "浅色")")
+    }
+    
+    private func updateThemeButton() {
+        guard let rightBarButtonItems = navigationItem.rightBarButtonItems,
+              let themeButton = rightBarButtonItems.first else {
+            return
+        }
+        
+        let currentTheme = ThemeManager.shared.getCurrentTheme()
+        let imageName = (currentTheme == .dark) ? "sun.max" : "moon"
+        themeButton.image = UIImage(systemName: imageName)
+        
+        print("🔄 主题按钮图标已更新: \(imageName)")
+    }
+    
+    private func syncInitialThemeToWebView() {
+        // 检查重试次数
+        guard themeInitRetryCount < maxThemeInitRetryCount else {
+            print("❌ WebView主题同步重试次数已达上限，停止重试")
+            return
+        }
+        
+        // 获取当前原生应用的主题状态
+        let currentTheme = ThemeManager.shared.getCurrentTheme()
+        let themeString = (currentTheme == .dark) ? "dark" : "light"
+        
+        print("🎨 尝试同步WebView主题 (\(themeInitRetryCount + 1)/\(maxThemeInitRetryCount)): \(themeString)")
+        
+        // 立即同步到WebView，不触发原生通知（避免循环）
+        let syncScript = """
+            (function() {
+                try {
+                    console.log('🎨 WebView初始化主题同步: \(themeString)');
+                    if (window.handleNativeThemeChange && typeof window.handleNativeThemeChange === 'function') {
+                        window.handleNativeThemeChange('\(themeString)');
+                        console.log('✅ WebView主题已同步到: \(themeString)');
+                        return true;
+                    } else {
+                        console.warn('⚠️ WebView handleNativeThemeChange函数未准备好');
+                        return false;
+                    }
+                } catch(e) {
+                    console.error('❌ WebView主题同步失败:', e.message);
+                    return false;
+                }
+            })();
+        """
+        
+        themeInitRetryCount += 1
+        
+        webView.evaluateJavaScript(syncScript) { [weak self] result, error in
+            if let error = error {
+                print("❌ WebView初始主题同步失败: \(error)")
+                // 如果同步失败且未达到重试上限，短暂延迟后重试
+                if let self = self, self.themeInitRetryCount < self.maxThemeInitRetryCount {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.syncInitialThemeToWebView()
+                    }
+                }
+            } else if let success = result as? Bool, success {
+                print("✅ WebView初始主题已同步: \(themeString)")
+                self?.themeInitRetryCount = 0 // 重置重试计数器
+            } else {
+                print("⚠️ WebView主题同步结果未知")
+                // 如果结果未知且未达到重试上限，短暂延迟后重试
+                if let self = self, self.themeInitRetryCount < self.maxThemeInitRetryCount {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        self.syncInitialThemeToWebView()
+                    }
+                }
+            }
+        }
     }
     
     // MARK: - 工具方法
@@ -755,7 +955,10 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
             } else if let isReady = result as? Bool {
                 print("🔍 DOM验证结果: \(isReady)")
                 if isReady {
-                    // DOM已准备好，检查是否有待渲染的内容
+                    // DOM已准备好，首先同步当前主题到WebView
+                    self?.syncInitialThemeToWebView()
+                    
+                    // 然后检查是否有待渲染的内容
                     if let pendingContent = self?.pendingMarkdownContent, !pendingContent.isEmpty {
                         print("📄 发现待渲染内容，开始渲染")
                         self?.markdownContent = pendingContent

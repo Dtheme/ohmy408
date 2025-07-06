@@ -7,6 +7,7 @@
 
 import UIKit
 import JXPhotoBrowser
+import SnapKit
 
 /// 学科分组模型
 class SubjectGroup {
@@ -85,8 +86,8 @@ class FileListViewController: UIViewController {
     private lazy var syncButton: UIButton = {
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "icloud.and.arrow.up"), for: .normal)
-        button.tintColor = .systemBlue
-        button.backgroundColor = .systemBlue.withAlphaComponent(0.1)
+        button.tintColor = .systemOrange
+        button.backgroundColor = .systemOrange.withAlphaComponent(0.1)
         button.layer.cornerRadius = 20
         button.layer.masksToBounds = true
         button.addTarget(self, action: #selector(syncButtonTapped), for: .touchUpInside)
@@ -96,11 +97,26 @@ class FileListViewController: UIViewController {
     private lazy var importButton: UIButton = {
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "plus.circle"), for: .normal)
-        button.tintColor = .systemGreen
-        button.backgroundColor = .systemGreen.withAlphaComponent(0.1)
+        button.tintColor = .systemOrange
+        button.backgroundColor = .systemOrange.withAlphaComponent(0.1)
         button.layer.cornerRadius = 20
         button.layer.masksToBounds = true
         button.addTarget(self, action: #selector(importButtonTapped), for: .touchUpInside)
+        return button
+    }()
+    
+    private lazy var themeButton: UIButton = {
+        let button = UIButton(type: .system)
+        let currentTheme = ThemeManager.shared.getCurrentTheme()
+        let imageName = (currentTheme == .dark) ? "sun.max" : "moon"
+        
+        button.setImage(UIImage(systemName: imageName), for: .normal)
+        button.tintColor = .systemOrange
+        button.backgroundColor = .systemOrange.withAlphaComponent(0.1)
+        button.layer.cornerRadius = 20
+        button.layer.masksToBounds = true
+        button.addTarget(self, action: #selector(themeButtonTapped), for: .touchUpInside)
+        
         return button
     }()
     
@@ -173,7 +189,7 @@ class FileListViewController: UIViewController {
     private lazy var refreshControl: UIRefreshControl = {
         let refresh = UIRefreshControl()
         refresh.addTarget(self, action: #selector(refreshData), for: .valueChanged)
-        refresh.tintColor = .systemBlue
+        refresh.tintColor = .systemOrange
         return refresh
     }()
     
@@ -191,8 +207,8 @@ class FileListViewController: UIViewController {
     private var currentSearchText = ""
     
     // MARK: - 约束
-    private var subjectsCollectionViewHeightConstraint: NSLayoutConstraint!
-    private var recentFilesTableViewHeightConstraint: NSLayoutConstraint!
+    private var currentCollectionViewHeight: CGFloat = 100
+    private var currentRecentFilesHeight: CGFloat = 0
     
     // MARK: - 生命周期
     override func viewDidLoad() {
@@ -229,6 +245,9 @@ class FileListViewController: UIViewController {
         // 设置内容视图
         setupContentView()
         setupConstraints()
+        
+        // 设置主题管理器
+        setupThemeManager()
     }
     
     private func setupNotifications() {
@@ -269,7 +288,8 @@ class FileListViewController: UIViewController {
         headerView.addSubview(subtitleLabel)
         headerView.addSubview(actionButtonsStackView)
         
-        // 设置按钮
+        // 设置按钮 - 添加主题切换按钮
+        actionButtonsStackView.addArrangedSubview(themeButton)
         actionButtonsStackView.addArrangedSubview(syncButton)
         actionButtonsStackView.addArrangedSubview(importButton)
         
@@ -305,14 +325,10 @@ class FileListViewController: UIViewController {
         stackView.spacing = 12
         
         statsContainerView.addSubview(stackView)
-        stackView.translatesAutoresizingMaskIntoConstraints = false
         
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: statsContainerView.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: statsContainerView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: statsContainerView.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: statsContainerView.bottomAnchor)
-        ])
+        stackView.snp.makeConstraints { make in
+            make.edges.equalTo(statsContainerView)
+        }
     }
     
     private func setupEmptySearchView() {
@@ -359,18 +375,15 @@ class FileListViewController: UIViewController {
         emptySearchView.addSubview(stackView)
         
         // 设置约束
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        emptyIconImageView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.snp.makeConstraints { make in
+            make.center.equalTo(emptySearchView)
+            make.leading.greaterThanOrEqualTo(emptySearchView).offset(40)
+            make.trailing.lessThanOrEqualTo(emptySearchView).offset(-40)
+        }
         
-        NSLayoutConstraint.activate([
-            stackView.centerXAnchor.constraint(equalTo: emptySearchView.centerXAnchor),
-            stackView.centerYAnchor.constraint(equalTo: emptySearchView.centerYAnchor),
-            stackView.leadingAnchor.constraint(greaterThanOrEqualTo: emptySearchView.leadingAnchor, constant: 40),
-            stackView.trailingAnchor.constraint(lessThanOrEqualTo: emptySearchView.trailingAnchor, constant: -40),
-            
-            emptyIconImageView.widthAnchor.constraint(equalToConstant: 80),
-            emptyIconImageView.heightAnchor.constraint(equalToConstant: 80)
-        ])
+        emptyIconImageView.snp.makeConstraints { make in
+            make.size.equalTo(80)
+        }
     }
     
     private func createStatsCard(title: String, value: String, icon: String, color: UIColor) -> StatsCardView {
@@ -379,102 +392,97 @@ class FileListViewController: UIViewController {
         return cardView
     }
     
+
+    
+    private func setupThemeManager() {
+        // 监听主题变化
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(themeDidChange),
+            name: ThemeManager.themeDidChangeNotification,
+            object: nil
+        )
+        
+        print("🎨 FileListViewController 主题管理器已设置")
+    }
+    
     private func setupConstraints() {
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        headerView.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        actionButtonsStackView.translatesAutoresizingMaskIntoConstraints = false
-        syncButton.translatesAutoresizingMaskIntoConstraints = false
-        importButton.translatesAutoresizingMaskIntoConstraints = false
-        searchBar.translatesAutoresizingMaskIntoConstraints = false
-        statsContainerView.translatesAutoresizingMaskIntoConstraints = false
-        subjectsCollectionView.translatesAutoresizingMaskIntoConstraints = false
-        searchResultsTableView.translatesAutoresizingMaskIntoConstraints = false
-        emptySearchView.translatesAutoresizingMaskIntoConstraints = false
-        recentFilesTableView.translatesAutoresizingMaskIntoConstraints = false
+        // 使用 SnapKit 设置约束
+        scrollView.snp.makeConstraints { make in
+            make.top.equalTo(view.safeAreaLayoutGuide.snp.top)
+            make.leading.trailing.bottom.equalTo(view)
+        }
         
-        NSLayoutConstraint.activate([
-            // 滚动视图
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            
-            // 内容视图
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
-            
-            // 头部视图
-            headerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
-            headerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            headerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            
-            // 标题
-            titleLabel.topAnchor.constraint(equalTo: headerView.topAnchor),
-            titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
-            
-            // 副标题
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
-            subtitleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
-            subtitleLabel.bottomAnchor.constraint(equalTo: headerView.bottomAnchor),
-            
-            // 操作按钮
-            actionButtonsStackView.topAnchor.constraint(equalTo: headerView.topAnchor),
-            actionButtonsStackView.trailingAnchor.constraint(equalTo: headerView.trailingAnchor),
-            actionButtonsStackView.leadingAnchor.constraint(greaterThanOrEqualTo: titleLabel.trailingAnchor, constant: 16),
-            
-            // 按钮尺寸
-            syncButton.widthAnchor.constraint(equalToConstant: 40),
-            syncButton.heightAnchor.constraint(equalToConstant: 40),
-            importButton.widthAnchor.constraint(equalToConstant: 40),
-            importButton.heightAnchor.constraint(equalToConstant: 40),
-            
-            // 搜索栏
-            searchBar.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 20),
-            searchBar.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            searchBar.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            
-            // 统计视图
-            statsContainerView.topAnchor.constraint(equalTo: searchBar.bottomAnchor, constant: 20),
-            statsContainerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            statsContainerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            
-            // 学科集合视图
-            subjectsCollectionView.topAnchor.constraint(equalTo: statsContainerView.bottomAnchor, constant: 30),
-            subjectsCollectionView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            subjectsCollectionView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            
-            // 搜索结果表格视图
-            searchResultsTableView.topAnchor.constraint(equalTo: statsContainerView.bottomAnchor, constant: 30),
-            searchResultsTableView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            searchResultsTableView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            searchResultsTableView.heightAnchor.constraint(equalToConstant: 400),
-            
-            // 空搜索状态视图
-            emptySearchView.topAnchor.constraint(equalTo: statsContainerView.bottomAnchor, constant: 30),
-            emptySearchView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            emptySearchView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            emptySearchView.heightAnchor.constraint(equalToConstant: 400),
-            
-            // 最近文件表格视图
-            recentFilesTableView.topAnchor.constraint(equalTo: subjectsCollectionView.bottomAnchor, constant: 20),
-            recentFilesTableView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            recentFilesTableView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            recentFilesTableView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
-        ])
+        contentView.snp.makeConstraints { make in
+            make.edges.equalTo(scrollView)
+            make.width.equalTo(scrollView)
+        }
         
-        // 设置动态高度约束 - 初始设置较小的高度
-        subjectsCollectionViewHeightConstraint = subjectsCollectionView.heightAnchor.constraint(equalToConstant: 100)
-        subjectsCollectionViewHeightConstraint.isActive = true
+        headerView.snp.makeConstraints { make in
+            make.top.equalTo(contentView).offset(20)
+            make.leading.trailing.equalTo(contentView).inset(20)
+        }
         
-        // 设置最近访问表格视图的动态高度约束
-        recentFilesTableViewHeightConstraint = recentFilesTableView.heightAnchor.constraint(equalToConstant: 0)
-        recentFilesTableViewHeightConstraint.isActive = true
+        titleLabel.snp.makeConstraints { make in
+            make.top.leading.equalTo(headerView)
+        }
+        
+        subtitleLabel.snp.makeConstraints { make in
+            make.top.equalTo(titleLabel.snp.bottom).offset(4)
+            make.leading.bottom.equalTo(headerView)
+        }
+        
+        actionButtonsStackView.snp.makeConstraints { make in
+            make.top.trailing.equalTo(headerView)
+            make.leading.greaterThanOrEqualTo(titleLabel.snp.trailing).offset(16)
+        }
+        
+        themeButton.snp.makeConstraints { make in
+            make.size.equalTo(40)
+        }
+        
+        syncButton.snp.makeConstraints { make in
+            make.size.equalTo(40)
+        }
+        
+        importButton.snp.makeConstraints { make in
+            make.size.equalTo(40)
+        }
+        
+        searchBar.snp.makeConstraints { make in
+            make.top.equalTo(headerView.snp.bottom).offset(20)
+            make.leading.trailing.equalTo(contentView).inset(16)
+        }
+        
+        statsContainerView.snp.makeConstraints { make in
+            make.top.equalTo(searchBar.snp.bottom).offset(20)
+            make.leading.trailing.equalTo(contentView).inset(20)
+        }
+        
+        subjectsCollectionView.snp.makeConstraints { make in
+            make.top.equalTo(statsContainerView.snp.bottom).offset(30)
+            make.leading.trailing.equalTo(contentView)
+            make.height.equalTo(currentCollectionViewHeight)
+        }
+        
+        searchResultsTableView.snp.makeConstraints { make in
+            make.top.equalTo(statsContainerView.snp.bottom).offset(30)
+            make.leading.trailing.equalTo(contentView)
+            make.height.equalTo(400)
+        }
+        
+        emptySearchView.snp.makeConstraints { make in
+            make.top.equalTo(statsContainerView.snp.bottom).offset(30)
+            make.leading.trailing.equalTo(contentView)
+            make.height.equalTo(400)
+        }
+        
+        recentFilesTableView.snp.makeConstraints { make in
+            make.top.equalTo(subjectsCollectionView.snp.bottom).offset(20)
+            make.leading.trailing.equalTo(contentView)
+            make.bottom.equalTo(contentView).offset(-20)
+            make.height.equalTo(currentRecentFilesHeight)
+        }
     }
     
     private func createSubjectsLayout() -> UICollectionViewLayout {
@@ -752,17 +760,23 @@ class FileListViewController: UIViewController {
         let newHeight = calculateCollectionViewContentHeight()
         
         // 避免不必要的更新
-        if abs(subjectsCollectionViewHeightConstraint.constant - newHeight) < 1.0 {
+        if abs(currentCollectionViewHeight - newHeight) < 1.0 {
             return
         }
         
+        currentCollectionViewHeight = newHeight
+        
         if animated {
             UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.9, initialSpringVelocity: 0, options: [.curveEaseInOut, .allowUserInteraction]) {
-                self.subjectsCollectionViewHeightConstraint.constant = newHeight
+                self.subjectsCollectionView.snp.updateConstraints { make in
+                    make.height.equalTo(newHeight)
+                }
                 self.view.layoutIfNeeded()
             }
         } else {
-            subjectsCollectionViewHeightConstraint.constant = newHeight
+            subjectsCollectionView.snp.updateConstraints { make in
+                make.height.equalTo(newHeight)
+            }
         }
         
         print("📏 更新CollectionView高度: \(newHeight)")
@@ -807,18 +821,24 @@ class FileListViewController: UIViewController {
         let newHeight: CGFloat = hasRecentFiles ? calculateRecentFilesHeight() : 0
         
         // 避免不必要的更新
-        if abs(recentFilesTableViewHeightConstraint.constant - newHeight) < 1.0 {
+        if abs(currentRecentFilesHeight - newHeight) < 1.0 {
             return
         }
         
+        currentRecentFilesHeight = newHeight
+        
         if animated {
             UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.9, initialSpringVelocity: 0, options: [.curveEaseInOut, .allowUserInteraction]) {
-                self.recentFilesTableViewHeightConstraint.constant = newHeight
+                self.recentFilesTableView.snp.updateConstraints { make in
+                    make.height.equalTo(newHeight)
+                }
                 self.recentFilesTableView.alpha = hasRecentFiles ? 1.0 : 0.0
                 self.view.layoutIfNeeded()
             }
         } else {
-            recentFilesTableViewHeightConstraint.constant = newHeight
+            recentFilesTableView.snp.updateConstraints { make in
+                make.height.equalTo(newHeight)
+            }
             recentFilesTableView.alpha = hasRecentFiles ? 1.0 : 0.0
         }
         
@@ -830,7 +850,7 @@ class FileListViewController: UIViewController {
         
         // 计算表格高度：头部 + 行数 * 行高 + 间距
         let headerHeight: CGFloat = 44
-        let rowHeight: CGFloat = 76 // 优化后的行高
+        let rowHeight: CGFloat = 92 // 新设计的行高（80 + 12间距）
         let numberOfRows = min(recentFiles.count, 5) // 最多显示5行
         let totalRowsHeight = CGFloat(numberOfRows) * rowHeight
         let sectionSpacing: CGFloat = 20
@@ -875,6 +895,30 @@ class FileListViewController: UIViewController {
         } else {
             showErrorToast(message)
         }
+    }
+    
+    @objc private func themeButtonTapped() {
+        // 切换主题
+        ThemeManager.shared.toggleTheme()
+    }
+    
+    @objc private func themeDidChange(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let theme = userInfo["theme"] as? UIUserInterfaceStyle else {
+            return
+        }
+        
+        print("🎨 FileListViewController 主题已变化为: \(theme == .dark ? "深色" : "浅色")")
+        
+        // 更新主题按钮图标
+        updateThemeButtonIcon()
+    }
+    
+    private func updateThemeButtonIcon() {
+        // 更新主题按钮图标
+        let currentTheme = ThemeManager.shared.getCurrentTheme()
+        let imageName = (currentTheme == .dark) ? "sun.max" : "moon"
+        themeButton.setImage(UIImage(systemName: imageName), for: .normal)
     }
     
     @objc private func syncButtonTapped() {
@@ -1802,9 +1846,6 @@ extension FileListViewController: UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        if tableView == recentFilesTableView {
-            return 76 // 优化后的行高
-        }
         return UITableView.automaticDimension
     }
 }
@@ -1952,30 +1993,23 @@ class DocumentCell: UICollectionViewCell {
         
         containerView.addSubview(mainStackView)
         
-        containerView.translatesAutoresizingMaskIntoConstraints = false
-        mainStackView.translatesAutoresizingMaskIntoConstraints = false
-        iconImageView.translatesAutoresizingMaskIntoConstraints = false
-        fileTypeWatermarkLabel.translatesAutoresizingMaskIntoConstraints = false
+        containerView.snp.makeConstraints { make in
+            make.edges.equalTo(contentView)
+        }
         
-        NSLayoutConstraint.activate([
-            containerView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            
-            // 水印标签约束 - 位于右侧
-            fileTypeWatermarkLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
-            fileTypeWatermarkLabel.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            fileTypeWatermarkLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 120),
-            
-            mainStackView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
-            mainStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            mainStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            mainStackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12),
-            
-            iconImageView.widthAnchor.constraint(equalToConstant: 24),
-            iconImageView.heightAnchor.constraint(equalToConstant: 24)
-        ])
+        fileTypeWatermarkLabel.snp.makeConstraints { make in
+            make.trailing.equalTo(containerView).offset(-8)
+            make.centerY.equalTo(containerView)
+            make.width.lessThanOrEqualTo(120)
+        }
+        
+        mainStackView.snp.makeConstraints { make in
+            make.edges.equalTo(containerView).inset(UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16))
+        }
+        
+        iconImageView.snp.makeConstraints { make in
+            make.size.equalTo(24)
+        }
     }
     
     func configure(with file: MarkdownFile) {
@@ -2072,18 +2106,14 @@ class SectionHeaderView: UICollectionReusableView {
         stackView.distribution = .equalSpacing
         
         addSubview(stackView)
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        chevronImageView.translatesAutoresizingMaskIntoConstraints = false
         
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-            stackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            stackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
-            stackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
-            
-            chevronImageView.widthAnchor.constraint(equalToConstant: 16),
-            chevronImageView.heightAnchor.constraint(equalToConstant: 16)
-        ])
+        stackView.snp.makeConstraints { make in
+            make.edges.equalTo(self).inset(UIEdgeInsets(top: 8, left: 20, bottom: 8, right: 20))
+        }
+        
+        chevronImageView.snp.makeConstraints { make in
+            make.size.equalTo(16)
+        }
         
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(headerTapped))
         addGestureRecognizer(tapGesture)
@@ -2205,34 +2235,28 @@ class SearchResultCell: UITableViewCell {
         
         containerView.addSubview(mainStackView)
         
-        containerView.translatesAutoresizingMaskIntoConstraints = false
-        mainStackView.translatesAutoresizingMaskIntoConstraints = false
-        iconImageView.translatesAutoresizingMaskIntoConstraints = false
-        matchLabel.translatesAutoresizingMaskIntoConstraints = false
-        fileTypeWatermarkLabel.translatesAutoresizingMaskIntoConstraints = false
+        containerView.snp.makeConstraints { make in
+            make.edges.equalTo(contentView).inset(UIEdgeInsets(top: 4, left: 16, bottom: 4, right: 16))
+        }
         
-        NSLayoutConstraint.activate([
-            containerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
-            containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
-            
-            // 水印标签约束 - 位于右侧背景
-            fileTypeWatermarkLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
-            fileTypeWatermarkLabel.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            fileTypeWatermarkLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 100),
-            
-            mainStackView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
-            mainStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
-            mainStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
-            mainStackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12),
-            
-            iconImageView.widthAnchor.constraint(equalToConstant: 28),
-            iconImageView.heightAnchor.constraint(equalToConstant: 28),
-            
-            matchLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
-            matchLabel.heightAnchor.constraint(equalToConstant: 24)
-        ])
+        fileTypeWatermarkLabel.snp.makeConstraints { make in
+            make.trailing.equalTo(containerView).offset(-8)
+            make.centerY.equalTo(containerView)
+            make.width.lessThanOrEqualTo(100)
+        }
+        
+        mainStackView.snp.makeConstraints { make in
+            make.edges.equalTo(containerView).inset(12)
+        }
+        
+        iconImageView.snp.makeConstraints { make in
+            make.size.equalTo(28)
+        }
+        
+        matchLabel.snp.makeConstraints { make in
+            make.width.greaterThanOrEqualTo(60)
+            make.height.equalTo(24)
+        }
     }
     
     func configure(with file: MarkdownFile, searchText: String) {
@@ -2351,7 +2375,26 @@ class RecentFileCell: UITableViewCell {
     
     private lazy var containerView: UIView = {
         let view = UIView()
-        view.backgroundColor = .secondarySystemGroupedBackground
+        view.layer.cornerRadius = 16
+        view.layer.masksToBounds = false
+        
+        // 添加阴影
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOffset = CGSize(width: 0, height: 2)
+        view.layer.shadowRadius = 8
+        view.layer.shadowOpacity = 0.1
+        
+        return view
+    }()
+    
+    private lazy var gradientLayer: CAGradientLayer = {
+        let gradient = CAGradientLayer()
+        gradient.cornerRadius = 16
+        return gradient
+    }()
+    
+    private lazy var iconContainerView: UIView = {
+        let view = UIView()
         view.layer.cornerRadius = 12
         view.layer.masksToBounds = true
         return view
@@ -2360,52 +2403,63 @@ class RecentFileCell: UITableViewCell {
     private lazy var iconImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.image = UIImage(systemName: "doc.richtext.fill")
-        imageView.tintColor = .systemBlue
+        imageView.tintColor = .white
         imageView.contentMode = .scaleAspectFit
         return imageView
     }()
     
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 16, weight: .medium)
+        label.font = .systemFont(ofSize: 17, weight: .semibold)
         label.textColor = .label
-        label.numberOfLines = 1
+        label.numberOfLines = 0
+        label.lineBreakMode = .byTruncatingTail
         return label
     }()
     
     private lazy var subtitleLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = .secondaryLabel
-        label.numberOfLines = 1
+        label.numberOfLines = 0
+        label.lineBreakMode = .byTruncatingTail
         return label
+    }()
+    
+    private lazy var timeContainerView: UIView = {
+        let view = UIView()
+        view.layer.cornerRadius = 12
+        view.layer.masksToBounds = true
+        return view
     }()
     
     private lazy var timeLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 12, weight: .medium)
-        label.textColor = .systemBlue
-        label.textAlignment = .right
-        label.numberOfLines = 1
+        label.font = .systemFont(ofSize: 11, weight: .medium)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.7
         return label
     }()
     
     private lazy var accessoryImageView: UIImageView = {
         let imageView = UIImageView(image: UIImage(systemName: "clock.fill"))
-        imageView.tintColor = .systemBlue
         imageView.contentMode = .scaleAspectFit
         return imageView
     }()
     
     private lazy var fileTypeWatermarkLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 36, weight: .black)
-        label.textColor = .systemGray5.withAlphaComponent(0.25)
+        label.font = .systemFont(ofSize: 32, weight: .black)
         label.textAlignment = .center
         label.numberOfLines = 1
         label.isUserInteractionEnabled = false
+        label.alpha = 0.2
         return label
     }()
+    
+
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -2422,54 +2476,87 @@ class RecentFileCell: UITableViewCell {
         
         contentView.addSubview(containerView)
         
-        // 添加水印标签到容器视图的背景
-        containerView.addSubview(fileTypeWatermarkLabel)
+        // 添加渐变背景
+        containerView.layer.insertSublayer(gradientLayer, at: 0)
         
+        // 添加图标容器
+        containerView.addSubview(iconContainerView)
+        iconContainerView.addSubview(iconImageView)
+        
+        // 添加文本内容
         let textStackView = UIStackView(arrangedSubviews: [titleLabel, subtitleLabel])
         textStackView.axis = .vertical
-        textStackView.spacing = 4
+        textStackView.spacing = 3
         textStackView.alignment = .leading
         
-        let rightStackView = UIStackView(arrangedSubviews: [accessoryImageView, timeLabel])
-        rightStackView.axis = .horizontal
-        rightStackView.spacing = 6
-        rightStackView.alignment = .center
+        containerView.addSubview(textStackView)
         
-        let mainStackView = UIStackView(arrangedSubviews: [iconImageView, textStackView, rightStackView])
-        mainStackView.axis = .horizontal
-        mainStackView.spacing = 12
-        mainStackView.alignment = .center
+        // 添加时间容器
+        containerView.addSubview(timeContainerView)
+        timeContainerView.addSubview(accessoryImageView)
+        timeContainerView.addSubview(timeLabel)
         
-        containerView.addSubview(mainStackView)
+        // 添加水印标签到容器视图的背景 - 置于最底层
+        containerView.insertSubview(fileTypeWatermarkLabel, at: 0)
         
-        containerView.translatesAutoresizingMaskIntoConstraints = false
-        mainStackView.translatesAutoresizingMaskIntoConstraints = false
-        iconImageView.translatesAutoresizingMaskIntoConstraints = false
-        accessoryImageView.translatesAutoresizingMaskIntoConstraints = false
-        fileTypeWatermarkLabel.translatesAutoresizingMaskIntoConstraints = false
+        // 设置约束
+        containerView.snp.makeConstraints { make in
+            make.top.bottom.equalTo(contentView).inset(6)
+            make.leading.trailing.equalTo(contentView).inset(12)
+            make.height.equalTo(80)
+        }
         
-        NSLayoutConstraint.activate([
-            containerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
-            containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
-            
-            // 水印标签约束 - 位于右侧背景
-            fileTypeWatermarkLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
-            fileTypeWatermarkLabel.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            fileTypeWatermarkLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 100),
-            
-            mainStackView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
-            mainStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
-            mainStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
-            mainStackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12),
-            
-            iconImageView.widthAnchor.constraint(equalToConstant: 28),
-            iconImageView.heightAnchor.constraint(equalToConstant: 28),
-            
-            accessoryImageView.widthAnchor.constraint(equalToConstant: 14),
-            accessoryImageView.heightAnchor.constraint(equalToConstant: 14)
-        ])
+        fileTypeWatermarkLabel.snp.makeConstraints { make in
+            make.leading.equalTo(containerView).offset(8)
+            make.centerY.equalTo(containerView)
+            make.width.lessThanOrEqualTo(60)
+        }
+        
+        iconContainerView.snp.makeConstraints { make in
+            make.leading.equalTo(containerView).offset(16)
+            make.centerY.equalTo(containerView)
+            make.size.equalTo(48)
+        }
+        
+        iconImageView.snp.makeConstraints { make in
+            make.center.equalTo(iconContainerView)
+            make.size.equalTo(24)
+        }
+        
+        textStackView.snp.makeConstraints { make in
+            make.leading.equalTo(iconContainerView.snp.trailing).offset(16)
+            make.centerY.equalTo(containerView)
+            make.trailing.lessThanOrEqualTo(timeContainerView.snp.leading).offset(-12)
+        }
+        
+        timeContainerView.snp.makeConstraints { make in
+            make.trailing.equalTo(containerView).offset(-16)
+            make.centerY.equalTo(containerView)
+            make.width.equalTo(90)
+            make.height.equalTo(32)
+        }
+        
+        accessoryImageView.snp.makeConstraints { make in
+            make.leading.equalTo(timeContainerView).offset(8)
+            make.centerY.equalTo(timeContainerView)
+            make.size.equalTo(12)
+        }
+        
+        timeLabel.snp.makeConstraints { make in
+            make.leading.equalTo(accessoryImageView.snp.trailing).offset(4)
+            make.trailing.equalTo(timeContainerView).offset(-8)
+            make.centerY.equalTo(timeContainerView)
+        }
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        gradientLayer.frame = containerView.bounds
+    }
+    
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        updateTheme()
     }
     
     func configure(with file: MarkdownFile) {
@@ -2484,20 +2571,97 @@ class RecentFileCell: UITableViewCell {
         // 显示相对时间
         timeLabel.text = getRelativeTimeString(from: file.modificationDate)
         
-        // 根据文件类型设置图标
+        // 根据文件类型设置图标和颜色
         let (iconName, iconColor) = getFileIcon(for: file)
         iconImageView.image = UIImage(systemName: iconName)
-        iconImageView.tintColor = iconColor
+        
+        // 设置图标容器的渐变背景
+        setupIconGradient(with: iconColor)
         
         // 设置文件类型水印
         let fileExtension = getFileExtension(for: file)
         fileTypeWatermarkLabel.text = fileExtension
+        
+        // 更新主题
+        updateTheme()
+    }
+    
+    private func setupIconGradient(with color: UIColor) {
+        // 移除现有的渐变图层
+        iconContainerView.layer.sublayers?.removeAll { $0 is CAGradientLayer }
+        
+        // 创建新的渐变图层
+        let gradient = CAGradientLayer()
+        gradient.frame = CGRect(x: 0, y: 0, width: 48, height: 48)
+        gradient.cornerRadius = 12
+        gradient.colors = [
+            color.cgColor,
+            color.withAlphaComponent(0.8).cgColor
+        ]
+        gradient.startPoint = CGPoint(x: 0, y: 0)
+        gradient.endPoint = CGPoint(x: 1, y: 1)
+        
+        iconContainerView.layer.insertSublayer(gradient, at: 0)
+    }
+    
+    private func updateTheme() {
+        let isDarkMode = traitCollection.userInterfaceStyle == .dark
+        
+        // 更新主背景渐变
+        if isDarkMode {
+            gradientLayer.colors = [
+                UIColor.secondarySystemGroupedBackground.cgColor,
+                UIColor.secondarySystemGroupedBackground.withAlphaComponent(0.8).cgColor
+            ]
+            
+            timeContainerView.backgroundColor = UIColor.tertiarySystemGroupedBackground
+            timeLabel.textColor = UIColor.secondaryLabel
+            accessoryImageView.tintColor = UIColor.secondaryLabel
+            
+            fileTypeWatermarkLabel.textColor = UIColor.systemGray3
+            
+            containerView.layer.shadowOpacity = 0.15
+            containerView.layer.shadowColor = UIColor.black.cgColor
+        } else {
+            gradientLayer.colors = [
+                UIColor.systemBackground.cgColor,
+                UIColor.systemBackground.withAlphaComponent(0.95).cgColor
+            ]
+            
+            timeContainerView.backgroundColor = UIColor.systemGray6
+            timeLabel.textColor = UIColor.label
+            accessoryImageView.tintColor = UIColor.label
+            
+            fileTypeWatermarkLabel.textColor = UIColor.systemGray3
+            
+            containerView.layer.shadowOpacity = 0.1
+            containerView.layer.shadowColor = UIColor.black.cgColor
+        }
+        
+        gradientLayer.startPoint = CGPoint(x: 0, y: 0)
+        gradientLayer.endPoint = CGPoint(x: 1, y: 1)
     }
     
     private func getRelativeTimeString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy.MM.dd"
-        return formatter.string(from: date)
+        let now = Date()
+        let interval = now.timeIntervalSince(date)
+        
+        if interval < 60 {
+            return "刚刚"
+        } else if interval < 3600 {
+            let minutes = Int(interval / 60)
+            return "\(minutes)分钟前"
+        } else if interval < 86400 {
+            let hours = Int(interval / 3600)
+            return "\(hours)小时前"
+        } else if interval < 604800 {
+            let days = Int(interval / 86400)
+            return "\(days)天前"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MM.dd"
+            return formatter.string(from: date)
+        }
     }
     
     private func getFileIcon(for file: MarkdownFile) -> (String, UIColor) {
@@ -2544,14 +2708,27 @@ class RecentFileCell: UITableViewCell {
     override func setHighlighted(_ highlighted: Bool, animated: Bool) {
         super.setHighlighted(highlighted, animated: animated)
         
-        UIView.animate(withDuration: 0.15) {
-            self.containerView.backgroundColor = highlighted ? 
-                .tertiarySystemGroupedBackground : 
-                .secondarySystemGroupedBackground
-            self.transform = highlighted ? 
-                CGAffineTransform(scaleX: 0.98, y: 0.98) : 
-                .identity
+        let duration = animated ? 0.15 : 0.0
+        
+        UIView.animate(withDuration: duration, delay: 0, options: [.beginFromCurrentState, .allowUserInteraction]) {
+            if highlighted {
+                self.containerView.transform = CGAffineTransform(scaleX: 0.96, y: 0.96)
+                self.containerView.alpha = 0.8
+                self.containerView.layer.shadowOpacity = 0.2
+                self.containerView.layer.shadowRadius = 12
+            } else {
+                self.containerView.transform = .identity
+                self.containerView.alpha = 1.0
+                let isDarkMode = self.traitCollection.userInterfaceStyle == .dark
+                self.containerView.layer.shadowOpacity = isDarkMode ? 0.15 : 0.1
+                self.containerView.layer.shadowRadius = 8
+            }
         }
+    }
+    
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+        // 防止选中状态改变背景色
     }
 }
 
@@ -2578,14 +2755,11 @@ class SubjectDetailViewController: UIViewController {
         view.backgroundColor = .systemGroupedBackground
         
         view.addSubview(tableView)
-        tableView.translatesAutoresizingMaskIntoConstraints = false
         
-        NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
+        tableView.snp.makeConstraints { make in
+            make.top.equalTo(view.safeAreaLayoutGuide.snp.top)
+            make.leading.trailing.bottom.equalTo(view)
+        }
     }
 }
 
@@ -2833,20 +3007,20 @@ class StatsCardView: UIView {
         stackView.alignment = .center
         
         addSubview(stackView)
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        iconImageView.translatesAutoresizingMaskIntoConstraints = false
         
-        NSLayoutConstraint.activate([
-            stackView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            stackView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            stackView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 8),
-            stackView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -8),
-            
-            iconImageView.widthAnchor.constraint(equalToConstant: 24),
-            iconImageView.heightAnchor.constraint(equalToConstant: 24),
-            
-            heightAnchor.constraint(equalToConstant: 100)
-        ])
+        stackView.snp.makeConstraints { make in
+            make.center.equalTo(self)
+            make.leading.greaterThanOrEqualTo(self).offset(8)
+            make.trailing.lessThanOrEqualTo(self).offset(-8)
+        }
+        
+        iconImageView.snp.makeConstraints { make in
+            make.size.equalTo(24)
+        }
+        
+        self.snp.makeConstraints { make in
+            make.height.equalTo(100)
+        }
     }
     
     func configure(title: String, value: String, icon: String, color: UIColor) {
