@@ -24,10 +24,13 @@ class MarkdownReaderViewController: UIViewController {
     private lazy var webView: WKWebView = {
         let config = WKWebViewConfiguration()
         
+        print("🔧 配置WebView...")
+        
         // 使用现代化的JavaScript配置
         let preferences = WKWebpagePreferences()
         preferences.allowsContentJavaScript = true
         config.defaultWebpagePreferences = preferences
+        print("✅ JavaScript已启用")
         
         // 优化性能配置
         config.allowsInlineMediaPlayback = true
@@ -38,6 +41,12 @@ class MarkdownReaderViewController: UIViewController {
         config.allowsAirPlayForMediaPlayback = false
         config.allowsPictureInPictureMediaPlayback = false
         
+        // 配置网络相关设置
+        if #available(iOS 14.0, *) {
+            config.limitsNavigationsToAppBoundDomains = false
+            print("✅ 允许访问外部域名")
+        }
+        
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
         webView.scrollView.showsVerticalScrollIndicator = true
@@ -47,6 +56,7 @@ class MarkdownReaderViewController: UIViewController {
         webView.scrollView.decelerationRate = UIScrollView.DecelerationRate.normal
         webView.scrollView.contentInsetAdjustmentBehavior = .automatic
         
+        print("✅ WebView配置完成")
         return webView
     }()
     
@@ -639,14 +649,17 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         // 获取请求的URL
         guard let url = navigationAction.request.url else {
+            print("⚠️ 导航请求无URL")
             decisionHandler(.allow)
             return
         }
         
         let urlString = url.absoluteString
+        print("🔍 WebView导航请求: \(urlString)")
         
         // 检查是否是初始页面加载（本地HTML文件）
         if urlString.contains("markdown_viewer.html") {
+            print("📄 允许加载本地HTML文件")
             decisionHandler(.allow)
             return
         }
@@ -654,11 +667,17 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
         // 处理不同类型的链接
         if urlString.starts(with: "mailto:") {
             // 邮件链接
+            print("📧 检测到邮件链接")
             if UIApplication.shared.canOpenURL(url) {
-                UIApplication.shared.open(url)
-                print("📧 打开邮件链接: \(urlString)")
+                UIApplication.shared.open(url) { success in
+                    if success {
+                        print("✅ 成功打开邮件链接: \(urlString)")
+                    } else {
+                        print("❌ 邮件链接打开失败: \(urlString)")
+                    }
+                }
             } else {
-                print("❌ 无法打开邮件链接: \(urlString)")
+                print("❌ 无法打开邮件链接（系统不支持）: \(urlString)")
             }
             decisionHandler(.cancel)
             return
@@ -666,11 +685,17 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
         
         if urlString.starts(with: "tel:") {
             // 电话链接
+            print("📞 检测到电话链接")
             if UIApplication.shared.canOpenURL(url) {
-                UIApplication.shared.open(url)
-                print("📞 打开电话链接: \(urlString)")
+                UIApplication.shared.open(url) { success in
+                    if success {
+                        print("✅ 成功打开电话链接: \(urlString)")
+                    } else {
+                        print("❌ 电话链接打开失败: \(urlString)")
+                    }
+                }
             } else {
-                print("❌ 无法打开电话链接: \(urlString)")
+                print("❌ 无法打开电话链接（系统不支持）: \(urlString)")
             }
             decisionHandler(.cancel)
             return
@@ -678,9 +703,10 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
         
         if urlString.starts(with: "http://") || urlString.starts(with: "https://") {
             // 外链 - 在外部浏览器中打开
+            print("🌐 检测到外链，将在外部浏览器打开")
             UIApplication.shared.open(url) { success in
                 if success {
-                    print("🌐 成功打开外链: \(urlString)")
+                    print("✅ 成功打开外链: \(urlString)")
                 } else {
                     print("❌ 无法打开外链: \(urlString)")
                 }
@@ -691,11 +717,13 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
         
         if urlString.starts(with: "#") {
             // 锚点链接 - 允许在当前页面处理
+            print("🔗 检测到锚点链接，允许页面内处理")
             decisionHandler(.allow)
             return
         }
         
         // 其他链接类型 - 默认允许
+        print("🤔 未知链接类型，默认允许: \(urlString)")
         decisionHandler(.allow)
     }
     

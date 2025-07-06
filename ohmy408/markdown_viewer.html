@@ -769,7 +769,9 @@
                                 // 添加图片点击放大功能
             function addImageZoomFunction(element) {
                 const images = element.querySelectorAll('img');
-                images.forEach(img => {
+                console.log(`🖼️ 发现 ${images.length} 张图片`);
+                
+                images.forEach((img, index) => {
                     // 避免重复添加事件监听器
                     if (img.dataset.zoomEnabled) {
                         return;
@@ -778,8 +780,60 @@
                     // 标记已处理
                     img.dataset.zoomEnabled = 'true';
                     
+                    // 添加图片加载状态日志
+                    const imgSrc = img.src;
+                    const imgAlt = img.alt || `图片${index + 1}`;
+                    
+                    console.log(`🖼️ 处理图片 ${index + 1}: ${imgAlt}`, {
+                        src: imgSrc,
+                        naturalWidth: img.naturalWidth,
+                        naturalHeight: img.naturalHeight,
+                        complete: img.complete
+                    });
+                    
+                    // 添加加载成功事件
+                    img.addEventListener('load', function() {
+                        console.log(`✅ 图片加载成功: ${imgAlt}`, {
+                            src: this.src,
+                            naturalWidth: this.naturalWidth,
+                            naturalHeight: this.naturalHeight,
+                            displayWidth: this.width,
+                            displayHeight: this.height
+                        });
+                    });
+                    
+                    // 添加加载失败事件
+                    img.addEventListener('error', function() {
+                        console.error(`❌ 图片加载失败: ${imgAlt}`, {
+                            src: this.src,
+                            error: '加载失败'
+                        });
+                        
+                        // 添加错误提示
+                        const errorDiv = document.createElement('div');
+                        errorDiv.style.cssText = `
+                            border: 2px dashed #ff6b6b;
+                            border-radius: 8px;
+                            padding: 20px;
+                            margin: 10px 0;
+                            background-color: #fff5f5;
+                            color: #c53030;
+                            text-align: center;
+                            font-size: 14px;
+                        `;
+                        errorDiv.innerHTML = `
+                            <div style="font-weight: bold;">图片加载失败</div>
+                            <div style="margin-top: 8px; font-size: 12px; word-break: break-all;">${this.src}</div>
+                            <div style="margin-top: 8px; font-size: 12px;">原因：网络错误或图片不存在</div>
+                        `;
+                        
+                        // 在图片位置显示错误信息
+                        this.parentNode.replaceChild(errorDiv, this);
+                    });
+                    
                     // 添加点击事件
                     img.addEventListener('click', function() {
+                        console.log(`🖱️ 点击图片: ${imgAlt}`);
                         showImageModal(this);
                     });
                 });
@@ -787,6 +841,15 @@
             
             // 显示图片放大模态框
             function showImageModal(img) {
+                const imgSrc = img.src;
+                const imgAlt = img.alt || '图片';
+                
+                console.log(`🔍 显示图片模态框: ${imgAlt}`, {
+                    src: imgSrc,
+                    naturalWidth: img.naturalWidth,
+                    naturalHeight: img.naturalHeight
+                });
+                
                 // 创建模态框
                 const modal = document.createElement('div');
                 modal.className = 'image-modal';
@@ -806,8 +869,8 @@
                 
                 // 创建放大的图片
                 const modalImg = document.createElement('img');
-                modalImg.src = img.src;
-                modalImg.alt = img.alt;
+                modalImg.src = imgSrc;
+                modalImg.alt = imgAlt;
                 modalImg.style.cssText = `
                     max-width: 90%;
                     max-height: 90%;
@@ -816,16 +879,44 @@
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
                 `;
                 
+                // 添加模态框图片加载事件
+                modalImg.addEventListener('load', function() {
+                    console.log(`✅ 模态框图片加载成功: ${imgAlt}`);
+                });
+                
+                modalImg.addEventListener('error', function() {
+                    console.error(`❌ 模态框图片加载失败: ${imgAlt}`);
+                    
+                    // 显示错误信息
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = `
+                        color: white;
+                        text-align: center;
+                        padding: 20px;
+                        background-color: rgba(255, 0, 0, 0.8);
+                        border-radius: 8px;
+                    `;
+                    errorDiv.innerHTML = `
+                        <div style="font-size: 18px; font-weight: bold;">图片加载失败</div>
+                        <div style="margin-top: 10px; font-size: 14px; word-break: break-all;">${imgSrc}</div>
+                    `;
+                    
+                    modal.innerHTML = '';
+                    modal.appendChild(errorDiv);
+                });
+                
                 modal.appendChild(modalImg);
                 
                 // 添加关闭事件
                 modal.addEventListener('click', function() {
+                    console.log(`❌ 关闭图片模态框: ${imgAlt}`);
                     modal.remove();
                 });
                 
                 // 添加ESC键关闭
                 const handleEsc = function(e) {
                     if (e.key === 'Escape') {
+                        console.log(`⌨️ ESC键关闭图片模态框: ${imgAlt}`);
                         modal.remove();
                         document.removeEventListener('keydown', handleEsc);
                     }
@@ -833,6 +924,7 @@
                 document.addEventListener('keydown', handleEsc);
                 
                 document.body.appendChild(modal);
+                console.log(`📱 图片模态框已添加到页面`);
             }
             
                                 // 添加代码复制功能
@@ -963,22 +1055,31 @@
                     // 使用requestAnimationFrame确保DOM更新后再处理增强功能
                     requestAnimationFrame(() => {
                         try {
+                            console.log('🚀 开始处理Markdown增强功能');
+                            
                             // 处理链接显示和交互
+                            console.log('🔗 处理链接功能');
                             processLinks(contentElement);
                             
                             // 添加图片点击放大功能
+                            console.log('🖼️ 处理图片功能');
                             addImageZoomFunction(contentElement);
                             
                             // 添加代码复制功能
+                            console.log('📋 处理代码复制功能');
                             addCodeCopyButtons(contentElement);
                             
                             // 优化任务列表样式
+                            console.log('☑️ 处理任务列表功能');
                             enhanceTaskLists(contentElement);
                             
                             // 生成目录
+                            console.log('📑 生成目录');
                             generateTOC();
+                            
+                            console.log('✅ 所有增强功能处理完成');
                         } catch (error) {
-                            console.error('增强功能处理错误:', error);
+                            console.error('❌ 增强功能处理错误:', error);
                         }
                     });
                     
@@ -1003,18 +1104,61 @@
                 }
             }
             
+            // 检测网络连接状态
+            function checkNetworkStatus() {
+                if ('onLine' in navigator) {
+                    console.log(`🌐 网络状态: ${navigator.onLine ? '在线' : '离线'}`);
+                }
+                
+                if ('connection' in navigator) {
+                    const connection = navigator.connection;
+                    console.log('📶 网络连接信息:', {
+                        effectiveType: connection.effectiveType,
+                        downlink: connection.downlink,
+                        rtt: connection.rtt
+                    });
+                }
+                
+                // 测试网络连接
+                const testImage = new Image();
+                testImage.onload = () => {
+                    console.log('✅ 网络连接测试: 成功');
+                };
+                testImage.onerror = () => {
+                    console.error('❌ 网络连接测试: 失败');
+                };
+                testImage.src = 'https://httpbin.org/image/png?_=' + Date.now();
+            }
+            
             // 页面加载完成后初始化
             document.addEventListener('DOMContentLoaded', () => {
                 try {
+                    console.log('📱 页面加载完成，开始初始化');
+                    
+                    // 检测网络状态
+                    checkNetworkStatus();
+                    
+                    // 初始化目录功能
                     initTOC();
                     
                     // 检查viewport设置（移动端优化提醒）
                     const viewport = document.querySelector('meta[name="viewport"]');
                     if (!viewport || !viewport.content.includes('width=device-width')) {
-                        console.warn('建议添加viewport meta标签以优化移动端显示');
+                        console.warn('⚠️ 建议添加viewport meta标签以优化移动端显示');
                     }
+                    
+                    // 监听网络状态变化
+                    window.addEventListener('online', () => {
+                        console.log('🌐 网络已连接');
+                    });
+                    
+                    window.addEventListener('offline', () => {
+                        console.warn('🚫 网络已断开');
+                    });
+                    
+                    console.log('✅ 页面初始化完成');
                 } catch (error) {
-                    console.error('初始化错误:', error);
+                    console.error('❌ 初始化错误:', error);
                 }
             });
             
