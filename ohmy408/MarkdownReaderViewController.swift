@@ -636,6 +636,69 @@ class MarkdownReaderViewController: UIViewController {
 // MARK: - WKNavigationDelegate
 extension MarkdownReaderViewController: WKNavigationDelegate {
     
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        // 获取请求的URL
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.allow)
+            return
+        }
+        
+        let urlString = url.absoluteString
+        
+        // 检查是否是初始页面加载（本地HTML文件）
+        if urlString.contains("markdown_viewer.html") {
+            decisionHandler(.allow)
+            return
+        }
+        
+        // 处理不同类型的链接
+        if urlString.starts(with: "mailto:") {
+            // 邮件链接
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url)
+                print("📧 打开邮件链接: \(urlString)")
+            } else {
+                print("❌ 无法打开邮件链接: \(urlString)")
+            }
+            decisionHandler(.cancel)
+            return
+        }
+        
+        if urlString.starts(with: "tel:") {
+            // 电话链接
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url)
+                print("📞 打开电话链接: \(urlString)")
+            } else {
+                print("❌ 无法打开电话链接: \(urlString)")
+            }
+            decisionHandler(.cancel)
+            return
+        }
+        
+        if urlString.starts(with: "http://") || urlString.starts(with: "https://") {
+            // 外链 - 在外部浏览器中打开
+            UIApplication.shared.open(url) { success in
+                if success {
+                    print("🌐 成功打开外链: \(urlString)")
+                } else {
+                    print("❌ 无法打开外链: \(urlString)")
+                }
+            }
+            decisionHandler(.cancel)
+            return
+        }
+        
+        if urlString.starts(with: "#") {
+            // 锚点链接 - 允许在当前页面处理
+            decisionHandler(.allow)
+            return
+        }
+        
+        // 其他链接类型 - 默认允许
+        decisionHandler(.allow)
+    }
+    
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         print("✅ WebView导航完成")
         isHTMLTemplateLoaded = true
