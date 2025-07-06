@@ -990,14 +990,7 @@ class FileListViewController: UIViewController {
         }
         previewAction.setValue(UIImage(systemName: "eye"), forKey: "image")
         
-        // 调试信息（仅在开发模式下显示）
-        #if DEBUG
-        let debugAction = UIAlertAction(title: "调试信息", style: .default) { [weak self] _ in
-            self?.showDebugInfo(for: file)
-        }
-        debugAction.setValue(UIImage(systemName: "ladybug"), forKey: "image")
-        alertController.addAction(debugAction)
-        #endif
+
         
         // 取消
         let cancelAction = UIAlertAction(title: "取消", style: .cancel)
@@ -1016,81 +1009,7 @@ class FileListViewController: UIViewController {
         present(alertController, animated: true)
     }
     
-    /// 显示调试信息
-    private func showDebugInfo(for file: MarkdownFile) {
-        let debugReport = generateDebugReport(fileURL: file.url)
-        
-        let alertController = UIAlertController(
-            title: "XMind调试信息",
-            message: debugReport,
-            preferredStyle: .alert
-        )
-        
-        let copyAction = UIAlertAction(title: "复制到剪贴板", style: .default) { _ in
-            UIPasteboard.general.string = debugReport
-        }
-        
-        let closeAction = UIAlertAction(title: "关闭", style: .cancel)
-        
-        alertController.addAction(copyAction)
-        alertController.addAction(closeAction)
-        
-        present(alertController, animated: true)
-    }
-    
-    /// 生成调试报告
-    private func generateDebugReport(fileURL: URL) -> String {
-        let fileManager = FileManager.default
-        
-        // 检查XMind应用状态
-        let schemes = ["xmind://", "com.xmind.zen://", "com.xmind.mindmap://", "xmind-2021://"]
-        var installedSchemes: [String] = []
-        
-        for scheme in schemes {
-            if let url = URL(string: scheme), UIApplication.shared.canOpenURL(url) {
-                installedSchemes.append(scheme)
-            }
-        }
-        
-        // 检查文件状态
-        let exists = fileManager.fileExists(atPath: fileURL.path)
-        let isReadable = fileManager.isReadableFile(atPath: fileURL.path)
-        let isXMindFile = fileURL.pathExtension.lowercased() == "xmind"
-        let fileSize = getFileSize(fileURL)
-        
-        var report = """
-        === XMind文件共享调试报告 ===
-        
-        📱 XMind应用状态:
-        - 已安装: \(!installedSchemes.isEmpty ? "✅ 是" : "❌ 否")
-        - 可用URL Schemes: \(installedSchemes.joined(separator: ", "))
-        
-        📄 文件状态:
-        - 文件存在: \(exists ? "✅ 是" : "❌ 否")
-        - 可读取: \(isReadable ? "✅ 是" : "❌ 否")
-        - 是XMind文件: \(isXMindFile ? "✅ 是" : "❌ 否")
-        - 文件大小: \(fileSize)
-        - 文件路径: \(fileURL.path)
-        
-        🔧 建议解决方案:
-        """
-        
-        if installedSchemes.isEmpty {
-            report += "\n- 请先安装XMind应用"
-        }
-        
-        if !exists {
-            report += "\n- 文件不存在，请检查文件路径"
-        }
-        
-        if !isReadable {
-            report += "\n- 文件权限不足，请检查文件权限"
-        }
-        
-        report += "\n\n=== 报告结束 ==="
-        
-        return report
-    }
+
     
     /// 使用XMind应用打开文件
     private func openWithXMindApp(file: MarkdownFile) {

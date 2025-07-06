@@ -50,12 +50,37 @@ class MarkdownReaderViewController: UIViewController {
         
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
-        webView.scrollView.showsVerticalScrollIndicator = true
+        
+        // 隐藏所有滚动指示器以获得更清洁的视觉效果
+        webView.scrollView.showsVerticalScrollIndicator = false
         webView.scrollView.showsHorizontalScrollIndicator = false
         
         // 优化滚动性能
         webView.scrollView.decelerationRate = UIScrollView.DecelerationRate.normal
         webView.scrollView.contentInsetAdjustmentBehavior = .automatic
+        
+        // 移除WebView的边框和其他可能的视觉元素
+        webView.isOpaque = false
+        webView.backgroundColor = UIColor.clear
+        webView.scrollView.backgroundColor = UIColor.clear
+        
+        // 强制移除所有可能的边框和边距
+        webView.layer.borderWidth = 0
+        webView.layer.borderColor = UIColor.clear.cgColor
+        webView.clipsToBounds = false
+        webView.layer.masksToBounds = false
+        
+        // 设置ScrollView的边距为零
+        webView.scrollView.contentInset = .zero
+        webView.scrollView.scrollIndicatorInsets = .zero
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.scrollView.clipsToBounds = false
+        webView.scrollView.layer.masksToBounds = false
+        
+        // 隐藏WKBackdropView以消除边框线条
+        DispatchQueue.main.async {
+            self.hideWKBackdropView(in: webView)
+        }
         
         print("✅ WebView配置完成")
         return webView
@@ -152,6 +177,90 @@ class MarkdownReaderViewController: UIViewController {
     private var themeInitRetryCount: Int = 0
     private let maxThemeInitRetryCount: Int = 3
     
+    // MARK: - WebView辅助方法
+    private func hideWKBackdropView(in webView: WKWebView) {
+        // 递归遍历WebView的子视图，彻底清理所有可能的边框和背景
+        func cleanupWebViewLayers(in view: UIView, level: Int = 0) {
+            let className = NSStringFromClass(type(of: view))
+            let indent = String(repeating: "  ", count: level)
+            print("🔍 \(indent)检查视图: \(className)")
+            
+            // 针对所有WebKit内部视图进行处理
+            if className.contains("WK") {
+                // 设置透明背景
+                view.backgroundColor = UIColor.clear
+                view.isOpaque = false
+                
+                // 移除边框
+                view.layer.borderWidth = 0
+                view.layer.borderColor = UIColor.clear.cgColor
+                
+                // 移除阴影
+                view.layer.shadowOpacity = 0
+                view.layer.shadowRadius = 0
+                
+                // 特殊处理不同类型的WebKit视图
+                if className.contains("WKBackdrop") {
+                    view.isHidden = true
+                    view.alpha = 0
+                    print("🔧 \(indent)已隐藏WKBackdropView: \(className)")
+                }
+                else if className.contains("WKContentView") {
+                    // WKContentView特殊处理
+                    view.clipsToBounds = false
+                    view.layer.masksToBounds = false
+                    
+                    // 移除可能的边距
+                    if let scrollView = view.superview as? UIScrollView {
+                        scrollView.contentInset = .zero
+                        scrollView.scrollIndicatorInsets = .zero
+                        scrollView.contentOffset = .zero
+                    }
+                    
+                    print("🔧 \(indent)已处理WKContentView: \(className)")
+                }
+                else if className.contains("WKScrollView") {
+                    // WKScrollView特殊处理
+                    if let scrollView = view as? UIScrollView {
+                        scrollView.contentInset = .zero
+                        scrollView.scrollIndicatorInsets = .zero
+                        scrollView.contentInsetAdjustmentBehavior = .never
+                    }
+                    print("🔧 \(indent)已处理WKScrollView: \(className)")
+                }
+                
+                print("🔧 \(indent)已清理WebKit视图: \(className)")
+            }
+            
+            // 递归处理子视图
+            for subview in view.subviews {
+                cleanupWebViewLayers(in: subview, level: level + 1)
+            }
+        }
+        
+        print("🔧 开始清理WebView层次结构...")
+        cleanupWebViewLayers(in: webView)
+        
+        // 额外的WebView设置
+        webView.scrollView.contentInset = .zero
+        webView.scrollView.scrollIndicatorInsets = .zero
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.scrollView.clipsToBounds = false
+        webView.clipsToBounds = false
+        
+        // 添加持续监听，防止动态添加的视图
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            print("🔧 延迟清理WebView层次结构...")
+            cleanupWebViewLayers(in: webView)
+        }
+        
+        // 再次延迟处理，确保完全清理
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            print("🔧 最终清理WebView层次结构...")
+            cleanupWebViewLayers(in: webView)
+        }
+    }
+    
     // MARK: - 生命周期
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -201,14 +310,41 @@ class MarkdownReaderViewController: UIViewController {
         // 设置导航栏
         navigationItem.largeTitleDisplayMode = .never
         
+        // 隐藏导航栏底部分隔线
+        navigationController?.navigationBar.shadowImage = UIImage()
+        navigationController?.navigationBar.setBackgroundImage(UIImage(), for: .default)
+        
+        // iOS 13+ 的导航栏外观设置
+        if #available(iOS 13.0, *) {
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithDefaultBackground()
+            appearance.shadowColor = .clear // 移除底部阴影线
+            appearance.shadowImage = UIImage() // 移除底部分隔线
+            navigationController?.navigationBar.standardAppearance = appearance
+            navigationController?.navigationBar.scrollEdgeAppearance = appearance
+        }
+        
         // 添加右侧分享按钮
         setupNavigationButtons()
         
-        // 设置WebView
-        view.addSubview(webView)
-        webView.snp.makeConstraints { make in
+        // 创建WebView容器来裁剪可能的边框
+        let webViewContainer = UIView()
+        webViewContainer.backgroundColor = UIColor.clear
+        webViewContainer.clipsToBounds = true // 关键：裁剪超出边界的内容
+        view.addSubview(webViewContainer)
+        
+        webViewContainer.snp.makeConstraints { make in
             make.top.equalTo(view.safeAreaLayoutGuide.snp.top)
             make.leading.trailing.bottom.equalTo(view)
+        }
+        
+        // 设置WebView - 扩展一点点来隐藏可能的边框
+        webViewContainer.addSubview(webView)
+        webView.snp.makeConstraints { make in
+            make.top.equalTo(webViewContainer)
+            make.leading.equalTo(webViewContainer).offset(-2)
+            make.trailing.equalTo(webViewContainer).offset(2)
+            make.bottom.equalTo(webViewContainer).offset(2) 
         }
         
         // 设置加载指示器和相关组件
@@ -217,17 +353,17 @@ class MarkdownReaderViewController: UIViewController {
         view.addSubview(progressView)
         
         loadingIndicator.snp.makeConstraints { make in
-            make.centerX.equalTo(view)
-            make.centerY.equalTo(view).offset(-30)
+            make.centerX.equalTo(webViewContainer)
+            make.centerY.equalTo(webViewContainer).offset(-30)
         }
         
         loadingLabel.snp.makeConstraints { make in
-            make.centerX.equalTo(view)
+            make.centerX.equalTo(webViewContainer)
             make.top.equalTo(loadingIndicator.snp.bottom).offset(16)
         }
         
         progressView.snp.makeConstraints { make in
-            make.centerX.equalTo(view)
+            make.centerX.equalTo(webViewContainer)
             make.top.equalTo(loadingLabel.snp.bottom).offset(16)
             make.width.equalTo(200)
         }
@@ -932,6 +1068,9 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
         isHTMLTemplateLoaded = true
         isTemplateLoading = false
         showLoadingState(message: "渲染器加载完成", progress: 0.5)
+        
+        // 确保完全隐藏WKBackdropView
+        hideWKBackdropView(in: webView)
         
         // 验证DOM是否真正准备好
         let verifyDOMScript = """
