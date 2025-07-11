@@ -542,84 +542,281 @@ class MarkdownReaderViewController: UIViewController {
     }
     
     private func renderOptimizedMarkdown() {
-        // 检查内容大小，对大文件进行优化渲染
-        let contentSize = markdownContent.count
+        print("🎨 开始统一分块渲染")
         
-        if contentSize > 100000 { // 大于100KB的文件使用延迟渲染
-            renderLargeMarkdownWithDelay()
-        } else {
-            renderImmediateMarkdown()
-        }
+        // 所有文件都使用分块渲染，根据文件大小调整分块策略
+        renderMarkdownInChunks()
     }
     
-    private func renderLargeMarkdownWithDelay() {
-        showLoadingState(message: "正在渲染大文件...", progress: 0.8)
-        
-        print("📄 检测到大文件(\(markdownContent.count)字符)，使用延迟渲染策略")
-        
-        // 对于大文件，我们不分块内容，而是分步骤渲染
-        // 1. 先渲染基础结构
-        // 2. 然后渲染完整内容
-        renderLargeFileInSteps()
-    }
-    
-    private func renderLargeFileInSteps() {
-        // 检查重试次数
-        guard retryCount < maxRetryCount else {
-            print("❌ 大文件渲染重试次数超限，直接渲染")
-            performCompleteMarkdownRender()
+    private func renderMarkdownInChunks() {
+        guard !markdownContent.isEmpty else {
+            print("⚠️ Markdown内容为空，跳过分块渲染")
+            hideLoadingState()
             return
         }
         
-        // 先检查DOM是否准备好
-        let checkDOMScript = """
-            (function() {
-                try {
-                    var element = document.getElementById('rendered-content');
-                    return element !== null && typeof renderMarkdown === 'function';
-                } catch(e) {
-                    return false;
-                }
-            })();
+        let contentSize = markdownContent.count
+        print("🔄 开始统一分块渲染，文件大小: \(contentSize) 字符")
+        
+        // 根据文件大小智能调整分块策略
+        let (chunkSize, delayInterval, progressMessage) = getChunkStrategy(for: contentSize)
+        
+        // 按行分割内容
+        let lines = markdownContent.components(separatedBy: .newlines)
+        let totalLines = lines.count
+        
+        showLoadingState(message: progressMessage, progress: 0.8)
+        
+        // 初始化渲染环境
+        let initScript = """
+            try {
+                // 清空内容容器
+                document.getElementById('rendered-content').innerHTML = '';
+                
+                // 创建分块渲染容器
+                var chunkContainer = document.createElement('div');
+                chunkContainer.id = 'chunk-container';
+                chunkContainer.style.cssText = 'width: 100%; min-height: 100vh;';
+                document.getElementById('rendered-content').appendChild(chunkContainer);
+                
+                // 初始化分块渲染状态
+                window.chunkRenderState = {
+                    container: chunkContainer,
+                    totalChunks: Math.ceil(\(totalLines) / \(chunkSize)),
+                    renderedChunks: 0,
+                    isRendering: false,
+                    chunkSize: \(chunkSize),
+                    delayInterval: \(delayInterval)
+                };
+                
+                console.log('✅ 统一分块渲染环境初始化完成');
+                console.log('📊 文件大小: \(contentSize) 字符, 总行数: \(totalLines), 块大小: \(chunkSize) 行, 总块数: ' + window.chunkRenderState.totalChunks);
+                'init_success';
+            } catch(e) {
+                console.error('❌ 分块渲染初始化失败:', e);
+                'init_failed';
+            }
         """
         
-        webView.evaluateJavaScript(checkDOMScript) { [weak self] (result, error) in
+        webView.evaluateJavaScript(initScript) { [weak self] (result, error) in
             if let error = error {
-                print("❌ 大文件DOM检查脚本执行错误: \(error)")
-                self?.retryCount += 1
-                self?.retryLargeFileRender()
+                print("❌ 分块渲染初始化失败: \(error)")
+                self?.performCompleteMarkdownRender()
                 return
             }
             
-            if let isReady = result as? Bool, isReady {
-                // DOM已准备好，开始渲染
-                print("✅ DOM已准备好，开始大文件渲染")
-                self?.performCompleteMarkdownRender()
+            if let resultString = result as? String, resultString == "init_success" {
+                print("✅ 分块渲染环境初始化成功")
+                self?.renderNextChunk(lines: lines, chunkSize: chunkSize, currentIndex: 0, delayInterval: delayInterval)
             } else {
-                // DOM未准备好，延迟重试
-                self?.retryCount += 1
-                print("⏳ DOM未准备好，延迟重试大文件渲染... (第\(self?.retryCount ?? 0)次)")
-                self?.retryLargeFileRender()
+                print("❌ 分块渲染初始化失败，回退到完整渲染")
+                self?.performCompleteMarkdownRender()
             }
         }
     }
     
-    private func retryLargeFileRender() {
-        guard retryCount < maxRetryCount else {
-            print("❌ 大文件渲染重试次数超限，强制渲染")
-            performCompleteMarkdownRender()
+    /// 根据文件大小获取最佳分块策略
+    private func getChunkStrategy(for contentSize: Int) -> (chunkSize: Int, delayInterval: TimeInterval, progressMessage: String) {
+        if contentSize < 10000 { // 小于10KB
+            return (chunkSize: 200, delayInterval: 0.05, progressMessage: "快速渲染中...")
+        } else if contentSize < 50000 { // 10KB - 50KB
+            return (chunkSize: 100, delayInterval: 0.08, progressMessage: "优化渲染中...")
+        } else if contentSize < 100000 { // 50KB - 100KB
+            return (chunkSize: 75, delayInterval: 0.1, progressMessage: "分块渲染中...")
+        } else { // 大于100KB
+            return (chunkSize: 50, delayInterval: 0.12, progressMessage: "深度优化渲染中...")
+        }
+    }
+    
+    private func renderNextChunk(lines: [String], chunkSize: Int, currentIndex: Int, delayInterval: TimeInterval) {
+        guard currentIndex < lines.count else {
+            print("✅ 所有分块渲染完成")
+            finalizeChunkRendering()
             return
         }
         
-        let delay = min(0.3 * Double(retryCount), 3.0) // 递增延迟，最大3秒
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            self.renderLargeFileInSteps()
+        let endIndex = min(currentIndex + chunkSize, lines.count)
+        let chunkLines = Array(lines[currentIndex..<endIndex])
+        let chunkContent = chunkLines.joined(separator: "\n")
+        let chunkNumber = (currentIndex / chunkSize) + 1
+        let totalChunks = (lines.count + chunkSize - 1) / chunkSize
+        
+        // 更新进度
+        let progress = 0.8 + (0.2 * Double(currentIndex) / Double(lines.count))
+        showLoadingState(message: "渲染中... (\(chunkNumber)/\(totalChunks))", progress: progress)
+        
+        print("📄 渲染第\(chunkNumber)块 (行\(currentIndex+1)-\(endIndex))")
+        
+        let escapedContent = escapeForJavaScript(chunkContent)
+        
+        let renderScript = """
+            try {
+                if (!window.chunkRenderState || window.chunkRenderState.isRendering) {
+                    console.log('⏳ 等待上一块渲染完成...');
+                    'chunk_busy';
+                } else {
+                    window.chunkRenderState.isRendering = true;
+                    
+                    // 渲染当前块
+                    var chunkHtml = marked.parse('\(escapedContent)');
+                    
+                    // 创建块容器
+                    var chunkDiv = document.createElement('div');
+                    chunkDiv.className = 'markdown-chunk';
+                    chunkDiv.setAttribute('data-chunk', '\(chunkNumber)');
+                    chunkDiv.style.cssText = 'margin-bottom: 10px; opacity: 0; transition: opacity 0.3s ease;';
+                    chunkDiv.innerHTML = chunkHtml;
+                    
+                    // 添加到容器
+                    window.chunkRenderState.container.appendChild(chunkDiv);
+                    
+                    // 淡入效果
+                    setTimeout(function() {
+                        chunkDiv.style.opacity = '1';
+                    }, 50);
+                    
+                    window.chunkRenderState.renderedChunks++;
+                    window.chunkRenderState.isRendering = false;
+                    
+                    console.log('✅ 第\(chunkNumber)块渲染完成');
+                    'chunk_rendered';
+                }
+            } catch(e) {
+                console.error('❌ 分块渲染失败:', e);
+                window.chunkRenderState.isRendering = false;
+                'chunk_failed';
+            }
+        """
+        
+        webView.evaluateJavaScript(renderScript) { [weak self] (result, error) in
+            if let error = error {
+                print("❌ 第\(chunkNumber)块渲染失败: \(error)")
+                self?.performCompleteMarkdownRender()
+                return
+            }
+            
+            if let resultString = result as? String {
+                switch resultString {
+                case "chunk_rendered":
+                    // 延迟一点再渲染下一块，避免GPU过载
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delayInterval) {
+                        self?.renderNextChunk(lines: lines, chunkSize: chunkSize, currentIndex: endIndex, delayInterval: delayInterval)
+                    }
+                case "chunk_busy":
+                    // 等待一下再重试
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        self?.renderNextChunk(lines: lines, chunkSize: chunkSize, currentIndex: currentIndex, delayInterval: delayInterval)
+                    }
+                case "chunk_failed":
+                    print("❌ 分块渲染失败，回退到完整渲染")
+                    self?.performCompleteMarkdownRender()
+                default:
+                    print("⚠️ 未知的渲染结果: \(resultString)")
+                    self?.performCompleteMarkdownRender()
+                }
+            }
+        }
+    }
+    
+    private func finalizeChunkRendering() {
+        print("🎨 完成分块渲染，开始后处理...")
+        
+        let finalizeScript = """
+            try {
+                // 处理所有渲染增强功能
+                var container = document.getElementById('rendered-content');
+                if (container) {
+                    console.log('🔗 处理链接功能');
+                    processLinks(container);
+                    
+                    console.log('🖼️ 处理图片功能');
+                    addImageZoomFunction(container);
+                    
+                    console.log('📋 处理代码复制功能');
+                    addCodeCopyButtons(container);
+                    
+                    console.log('☑️ 处理任务列表功能');
+                    enhanceTaskLists(container);
+                    
+                    console.log('🎨 处理Mermaid图表');
+                    renderMermaidDiagrams(container);
+                    
+                    console.log('📱 优化移动端表格');
+                    optimizeTablesForMobile(container);
+                    
+                    console.log('🏷️ 优化HTML元素');
+                    enhanceHTMLElements(container);
+                    
+                    console.log('📑 生成目录');
+                    generateTOC();
+                    
+                    console.log('✅ 所有增强功能处理完成');
+                }
+                
+                // 清理分块渲染状态
+                delete window.chunkRenderState;
+                
+                'finalize_success';
+            } catch(e) {
+                console.error('❌ 后处理失败:', e);
+                'finalize_failed';
+            }
+        """
+        
+        webView.evaluateJavaScript(finalizeScript) { [weak self] (result, error) in
+            if let error = error {
+                print("❌ 后处理失败: \(error)")
+            }
+            
+            // 延迟渲染LaTeX公式
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self?.renderMathJax()
+            }
+            
+            // 隐藏加载状态
+            self?.hideLoadingState()
+        }
+    }
+    
+    private func renderMathJax() {
+        print("🧮 开始渲染LaTeX公式")
+        
+        let mathScript = """
+            try {
+                if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+                    var container = document.getElementById('rendered-content');
+                    if (container) {
+                        MathJax.typesetPromise([container]).then(function() {
+                            console.log('✅ LaTeX渲染完成');
+                        }).catch(function(err) {
+                            console.error('❌ LaTeX渲染错误:', err);
+                        });
+                    }
+                } else {
+                    console.warn('⚠️ MathJax未加载或不支持typesetPromise');
+                }
+                'math_started';
+            } catch(e) {
+                console.error('❌ LaTeX渲染启动失败:', e);
+                'math_failed';
+            }
+        """
+        
+        webView.evaluateJavaScript(mathScript) { (result, error) in
+            if let error = error {
+                print("❌ LaTeX渲染启动失败: \(error)")
+            } else {
+                print("✅ LaTeX渲染已启动")
+            }
         }
     }
     
     private func performCompleteMarkdownRender() {
-        // 渲染完整的Markdown内容，不分块
-        let escapedContent = escapeForJavaScript(markdownContent)
+        print("🔄 执行完整渲染作为回退方案")
+        
+        // 对于超大文件，进行预处理以减少渲染负担
+        let processedContent = preprocessContentForRendering(markdownContent)
+        let escapedContent = escapeForJavaScript(processedContent)
         
         showLoadingState(message: "正在处理内容...", progress: 0.9)
         
@@ -631,18 +828,26 @@ class MarkdownReaderViewController: UIViewController {
                 // 显示加载提示
                 document.getElementById('rendered-content').innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">正在渲染内容，请稍候...</div>';
                 
-                // 延迟渲染，避免阻塞UI
+                // 分步骤渲染以减少GPU负载
                 setTimeout(function() {
                     try {
-                        // 清空加载提示并渲染实际内容
+                        // 清空加载提示
                         document.getElementById('rendered-content').innerHTML = '';
+                        
+                        // 渲染内容
                         renderMarkdown('\(escapedContent)');
-                        console.log('✅ 大文件渲染完成');
+                        console.log('✅ 完整渲染完成');
+                        
+                        // 在渲染完成后，启动内存清理
+                        if (typeof gc !== 'undefined') {
+                            gc();
+                        }
+                        
                     } catch(e) {
                         console.error('❌ 渲染过程中出错:', e);
                         document.getElementById('rendered-content').innerHTML = '<div style="text-align: center; padding: 20px; color: #f00;">渲染失败: ' + e.message + '</div>';
                     }
-                }, 100);
+                }, 200);
                 
                 'rendering_started';
             } catch(e) {
@@ -657,89 +862,15 @@ class MarkdownReaderViewController: UIViewController {
                 self?.showError(message: "渲染失败: \(error.localizedDescription)")
             } else if let resultString = result as? String {
                 if resultString == "rendering_started" {
-                    print("✅ 大文件渲染已启动")
+                    print("✅ 完整渲染已启动")
                     // 延迟隐藏加载状态，给渲染时间
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                         self?.hideLoadingState()
                     }
                 } else {
                     print("❌ 渲染启动失败")
                     self?.showError(message: "渲染启动失败")
                 }
-            }
-        }
-    }
-    
-    private func renderImmediateMarkdown() {
-        // 检查重试次数
-        guard retryCount < maxRetryCount else {
-            print("❌ DOM检查重试次数超限，直接尝试渲染")
-            performMarkdownRender()
-            return
-        }
-        
-        // 先检查DOM是否已经准备好
-        let checkDOMScript = """
-            (function() {
-                try {
-                    var element = document.getElementById('rendered-content');
-                    return element !== null && typeof renderMarkdown === 'function';
-                } catch(e) {
-                    return false;
-                }
-            })();
-        """
-        
-        webView.evaluateJavaScript(checkDOMScript) { [weak self] (result, error) in
-            if let error = error {
-                print("❌ DOM检查脚本执行错误: \(error)")
-                self?.retryCount += 1
-                self?.retryDOMCheck()
-                return
-            }
-            
-            if let isReady = result as? Bool, isReady {
-                // DOM已准备好，开始渲染
-                print("✅ DOM已准备好，开始渲染")
-                self?.performMarkdownRender()
-            } else {
-                // DOM未准备好，延迟重试
-                self?.retryCount += 1
-                print("⏳ DOM未准备好，延迟重试... (第\(self?.retryCount ?? 0)次)")
-                self?.retryDOMCheck()
-            }
-        }
-    }
-    
-    private func retryDOMCheck() {
-        guard retryCount < maxRetryCount else {
-            print("❌ DOM检查重试次数超限，强制渲染")
-            performMarkdownRender()
-            return
-        }
-        
-        let delay = min(0.2 * Double(retryCount), 2.0) // 递增延迟，最大2秒
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            self.renderImmediateMarkdown()
-        }
-    }
-    
-    private func performMarkdownRender() {
-        // 直接渲染整个Markdown内容
-        let escapedContent = escapeForJavaScript(markdownContent)
-        let script = """
-            document.getElementById('rendered-content').innerHTML = '';
-            text = '';
-            renderMarkdown('\(escapedContent)');
-        """
-        
-        webView.evaluateJavaScript(script) { [weak self] (result, error) in
-            if let error = error {
-                print("❌ JavaScript执行错误: \(error)")
-                self?.showError(message: "渲染失败: \(error.localizedDescription)")
-            } else {
-                print("✅ Markdown内容渲染完成")
-                self?.hideLoadingState()
             }
         }
     }
@@ -975,6 +1106,96 @@ class MarkdownReaderViewController: UIViewController {
             .replacingOccurrences(of: "\r", with: "\\r")
             .replacingOccurrences(of: "\t", with: "\\t")
     }
+    
+    /// 预处理内容以减少渲染负担
+    private func preprocessContentForRendering(_ content: String) -> String {
+        let contentSize = content.count
+        
+        // 对于超大文件，进行一些优化
+        if contentSize > 200000 { // 大于200KB
+            print("🔧 预处理超大文件以减少渲染负担")
+            
+            // 简化一些复杂的内容
+            var processedContent = content
+            
+            // 1. 限制连续空行数量
+            processedContent = processedContent.replacingOccurrences(
+                of: "\n\n\n+",
+                with: "\n\n",
+                options: .regularExpression
+            )
+            
+            // 2. 简化过长的代码块
+            processedContent = simplifyLongCodeBlocks(processedContent)
+            
+            // 3. 压缩连续的相似列表项
+            processedContent = compressSimilarListItems(processedContent)
+            
+            print("🔧 预处理完成，大小从\(contentSize)减少到\(processedContent.count)")
+            return processedContent
+        }
+        
+        return content
+    }
+    
+    /// 简化过长的代码块
+    private func simplifyLongCodeBlocks(_ content: String) -> String {
+        let pattern = "```([\\s\\S]*?)```"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return content
+        }
+        
+        let range = NSRange(location: 0, length: content.count)
+        let matches = regex.matches(in: content, options: [], range: range)
+        
+        var processedContent = content
+        var offset = 0
+        
+        for match in matches {
+            let matchRange = NSRange(location: match.range.location + offset, length: match.range.length)
+            guard let stringRange = Range(matchRange, in: processedContent) else { continue }
+            
+            let matchedText = String(processedContent[stringRange])
+            
+            // 如果代码块太长，进行截断
+            if matchedText.count > 5000 {
+                let truncated = String(matchedText.prefix(5000))
+                let replacement = truncated + "\n\n// ... 代码块已截断以优化渲染性能 ...\n```"
+                
+                processedContent.replaceSubrange(stringRange, with: replacement)
+                offset += replacement.count - matchedText.count
+            }
+        }
+        
+        return processedContent
+    }
+    
+    /// 压缩相似的列表项
+    private func compressSimilarListItems(_ content: String) -> String {
+        let lines = content.components(separatedBy: .newlines)
+        var processedLines: [String] = []
+        var consecutiveListItems = 0
+        
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            
+            if trimmedLine.hasPrefix("- ") || trimmedLine.hasPrefix("* ") || trimmedLine.hasPrefix("+ ") {
+                consecutiveListItems += 1
+                
+                // 如果连续的列表项太多，进行压缩
+                if consecutiveListItems > 50 && consecutiveListItems % 10 == 0 {
+                    processedLines.append("- ... (已压缩部分列表项以优化渲染)")
+                    continue
+                }
+            } else {
+                consecutiveListItems = 0
+            }
+            
+            processedLines.append(line)
+        }
+        
+        return processedLines.joined(separator: "\n")
+    }
 }
 
 
@@ -1150,3 +1371,4 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
         }
     }
 }
+

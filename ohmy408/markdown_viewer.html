@@ -1557,6 +1557,193 @@
         
         <script>
             
+            // GPU优化和性能监控
+            function initPerformanceOptimizations() {
+                console.log('🚀 初始化性能优化...');
+                
+                // 检测GPU加速支持
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                
+                if (gl) {
+                    console.log('✅ GPU加速支持已启用');
+                    const renderer = gl.getParameter(gl.RENDERER);
+                    const vendor = gl.getParameter(gl.VENDOR);
+                    console.log(`📱 GPU信息: ${vendor} ${renderer}`);
+                } else {
+                    console.warn('⚠️ GPU加速不可用，使用CPU渲染');
+                }
+                
+                // 监控内存使用
+                if (performance.memory) {
+                    console.log('💾 内存使用情况:', {
+                        used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + 'MB',
+                        limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024) + 'MB'
+                    });
+                }
+                
+                // 设置性能监控
+                setupPerformanceMonitoring();
+            }
+            
+            // 性能监控
+            function setupPerformanceMonitoring() {
+                let renderingStartTime = 0;
+                let lastMemoryCheck = 0;
+                
+                // 监控渲染性能
+                window.startRenderingTimer = function() {
+                    renderingStartTime = performance.now();
+                };
+                
+                window.endRenderingTimer = function(operation) {
+                    const duration = performance.now() - renderingStartTime;
+                    console.log(`⏱️ ${operation} 耗时: ${duration.toFixed(2)}ms`);
+                    
+                    if (duration > 100) {
+                        console.warn(`⚠️ ${operation} 渲染较慢，建议优化`);
+                    }
+                };
+                
+                // 定期检查内存使用
+                setInterval(function() {
+                    if (performance.memory) {
+                        const currentMemory = performance.memory.usedJSHeapSize;
+                        const memoryIncrease = currentMemory - lastMemoryCheck;
+                        
+                        if (memoryIncrease > 10 * 1024 * 1024) { // 大于10MB增长
+                            console.log('📈 内存使用增长:', Math.round(memoryIncrease / 1024 / 1024) + 'MB');
+                            
+                            // 触发垃圾回收
+                            if (window.gc) {
+                                window.gc();
+                                console.log('🗑️ 手动垃圾回收已触发');
+                            }
+                        }
+                        
+                        lastMemoryCheck = currentMemory;
+                    }
+                }, 5000); // 每5秒检查一次
+            }
+            
+            // 优化DOM操作
+            function optimizeDOMOperations() {
+                // 批量DOM操作
+                window.batchDOMUpdates = function(updates) {
+                    const fragment = document.createDocumentFragment();
+                    
+                    updates.forEach(update => {
+                        const element = update.element;
+                        const parent = update.parent;
+                        
+                        if (parent) {
+                            fragment.appendChild(element);
+                        }
+                    });
+                    
+                    return fragment;
+                };
+                
+                // 虚拟滚动支持
+                window.createVirtualScrollContainer = function(itemHeight, totalItems) {
+                    const container = document.createElement('div');
+                    container.className = 'virtual-scroll-container';
+                    container.style.cssText = `
+                        height: ${itemHeight * totalItems}px;
+                        overflow-y: auto;
+                        position: relative;
+                    `;
+                    
+                    return container;
+                };
+            }
+            
+            // 分块渲染优化
+            function optimizeChunkRendering() {
+                // 延迟渲染队列
+                window.deferredRenderQueue = [];
+                window.isProcessingQueue = false;
+                
+                window.addToDeferredQueue = function(renderFunction) {
+                    window.deferredRenderQueue.push(renderFunction);
+                    processQueue();
+                };
+                
+                function processQueue() {
+                    if (window.isProcessingQueue || window.deferredRenderQueue.length === 0) {
+                        return;
+                    }
+                    
+                    window.isProcessingQueue = true;
+                    
+                    const renderFunction = window.deferredRenderQueue.shift();
+                    
+                    // 使用 requestAnimationFrame 确保在浏览器准备好时渲染
+                    requestAnimationFrame(() => {
+                        try {
+                            renderFunction();
+                        } catch (error) {
+                            console.error('❌ 延迟渲染错误:', error);
+                        }
+                        
+                        window.isProcessingQueue = false;
+                        
+                        // 处理下一个队列项
+                        setTimeout(processQueue, 16); // 约60fps的间隔
+                    });
+                }
+            }
+            
+            // 内存清理优化
+            function setupMemoryCleanup() {
+                window.cleanupMemory = function() {
+                    console.log('🧹 开始内存清理...');
+                    
+                    // 清理未使用的图片
+                    const images = document.querySelectorAll('img');
+                    images.forEach(img => {
+                        if (img.complete && !img.src.startsWith('data:')) {
+                            // 对于已加载的外部图片，可以考虑清理
+                            const rect = img.getBoundingClientRect();
+                            if (rect.top > window.innerHeight * 2 || rect.bottom < -window.innerHeight) {
+                                // 图片在视口外较远，可以考虑延迟加载
+                                img.style.opacity = '0.5';
+                            }
+                        }
+                    });
+                    
+                    // 清理DOM缓存
+                    const elements = document.querySelectorAll('[data-cached]');
+                    elements.forEach(el => {
+                        if (el.dataset.cached === 'true') {
+                            delete el.dataset.cached;
+                        }
+                    });
+                    
+                    // 手动触发垃圾回收（如果支持）
+                    if (window.gc) {
+                        window.gc();
+                    }
+                    
+                    console.log('✅ 内存清理完成');
+                };
+                
+                // 页面隐藏时清理内存
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        setTimeout(window.cleanupMemory, 1000);
+                    }
+                });
+            }
+            
+            // 初始化所有优化
+            window.addEventListener('load', () => {
+                initPerformanceOptimizations();
+                optimizeDOMOperations();
+                optimizeChunkRendering();
+                setupMemoryCleanup();
+            });
+            
             // 配置 Marked.js - 兼容现代版本和iOS WebView
             marked.setOptions({
                 breaks: true,        // 支持换行
@@ -2831,6 +3018,11 @@ gantt
             // 渲染函数
             function renderMarkdown(markdownText) {
                 try {
+                    // 启动性能监控
+                    if (window.startRenderingTimer) {
+                        window.startRenderingTimer();
+                    }
+                    
                     // 直接渲染完整的Markdown内容
                     text = markdownText;
                     
@@ -2851,15 +3043,9 @@ gantt
                         // 简化处理，专注于核心渲染功能
                     }
                     
-                    const html = marked.parse(processedText);
-                    const contentElement = document.getElementById('rendered-content');
-                    
-                    if (!contentElement) {
-                        console.error('未找到内容容器元素');
-                        return;
-                    }
-                    
-                    contentElement.innerHTML = html;
+                                         // 所有内容都使用优化的分块渲染
+                     console.log('📄 统一使用分块渲染，内容大小:', processedText.length);
+                     renderOptimizedContent(processedText);
                     
                     // iOS WebView基本处理
                     if (isIOSWebView) {
@@ -2871,55 +3057,13 @@ gantt
                         try {
                             console.log('🚀 开始处理Markdown增强功能');
                             
-                            // 处理链接显示和交互
-                            console.log('🔗 处理链接功能');
-                            processLinks(contentElement);
+                            // 使用优化的增强功能处理
+                            processEnhancements(contentElement);
                             
-                            // 添加图片点击放大功能
-                            console.log('🖼️ 处理图片功能');
-                            addImageZoomFunction(contentElement);
-                            
-                            // 添加代码复制功能
-                            console.log('📋 处理代码复制功能');
-                            addCodeCopyButtons(contentElement);
-                            
-                            // 优化任务列表样式
-                            console.log('☑️ 处理任务列表功能');
-                            enhanceTaskLists(contentElement);
-                            
-                            // 处理Mermaid图表
-                            console.log('🎨 处理Mermaid图表');
-                            renderMermaidDiagrams(contentElement);
-                            
-                            // 优化移动端表格显示
-                            console.log('📱 优化移动端表格');
-                            optimizeTablesForMobile(contentElement);
-                            
-                            // 优化HTML元素显示
-                            console.log('🏷️ 优化HTML元素');
-                            enhanceHTMLElements(contentElement);
-                            
-                            // 生成目录
-                            console.log('📑 生成目录');
-                            generateTOC();
-                            
-                            console.log('✅ 所有增强功能处理完成');
-                            
-                            // 在所有增强功能完成后渲染数学公式
-                            setTimeout(() => {
-                                console.log('🧮 开始渲染LaTeX公式');
-                                if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
-                                    MathJax.typesetPromise([contentElement])
-                        .then(() => {
-                                            console.log('✅ LaTeX渲染完成');
-                        })
-                        .catch((err) => {
-                                            console.error('❌ LaTeX渲染错误:', err);
-                                        });
-                                } else {
-                                    console.warn('⚠️ MathJax未加载或不支持typesetPromise');
-                                }
-                            }, 200); // 给DOM足够时间稳定
+                            // 结束性能监控
+                            if (window.endRenderingTimer) {
+                                window.endRenderingTimer('标准渲染');
+                            }
                             
                         } catch (error) {
                             console.error('❌ 增强功能处理错误:', error);
@@ -3091,6 +3235,203 @@ gantt
             window.renderMarkdown = renderMarkdown;
             window.debugRendering = debugRendering;
             window.debugLaTeXRendering = debugLaTeXRendering;
+            
+                         // 统一分块渲染
+             function renderOptimizedContent(content) {
+                 console.log('🚀 开始统一分块渲染');
+                
+                const contentElement = document.getElementById('rendered-content');
+                if (!contentElement) {
+                    console.error('未找到内容容器元素');
+                    return;
+                }
+                
+                // 清空容器
+                contentElement.innerHTML = '';
+                
+                // 创建加载提示
+                const loadingDiv = document.createElement('div');
+                loadingDiv.style.cssText = 'text-align: center; padding: 20px; color: #666;';
+                loadingDiv.textContent = '正在渲染大文件，请稍候...';
+                contentElement.appendChild(loadingDiv);
+                
+                // 延迟渲染以避免阻塞UI
+                setTimeout(() => {
+                    try {
+                        // 移除加载提示
+                        contentElement.removeChild(loadingDiv);
+                        
+                        // 分步渲染
+                        renderContentInSteps(content, contentElement);
+                        
+                                         } catch (error) {
+                         console.error('❌ 分块渲染失败:', error);
+                         contentElement.innerHTML = '<div style="color: red; padding: 20px;">渲染失败: ' + error.message + '</div>';
+                     }
+                }, 100);
+            }
+            
+                         // 分步渲染内容
+             function renderContentInSteps(content, container) {
+                 // 根据内容大小智能调整分块策略
+                 const contentSize = content.length;
+                 const strategy = getOptimalChunkStrategy(contentSize);
+                 
+                 // 将内容按策略分块
+                 const chunks = chunkContentByStrategy(content, strategy);
+                 const totalChunks = chunks.length;
+                 let currentChunk = 0;
+                 
+                 console.log(`📄 智能分块渲染: ${totalChunks} 个块, 策略: ${strategy.name}, 内容大小: ${contentSize}`);
+                
+                function renderNextChunk() {
+                    if (currentChunk >= totalChunks) {
+                        console.log('✅ 分步渲染完成');
+                        
+                        // 渲染完成后处理
+                        setTimeout(() => {
+                            processEnhancements(container);
+                            
+                                                         // 结束性能监控
+                             if (window.endRenderingTimer) {
+                                 window.endRenderingTimer('分块渲染');
+                             }
+                        }, 100);
+                        
+                        return;
+                    }
+                    
+                    const chunk = chunks[currentChunk];
+                    if (chunk.trim()) {
+                        try {
+                            const chunkHtml = marked.parse(chunk);
+                            
+                            // 创建块容器
+                            const chunkDiv = document.createElement('div');
+                            chunkDiv.className = 'content-chunk';
+                            chunkDiv.innerHTML = chunkHtml;
+                            chunkDiv.style.cssText = 'opacity: 0; transition: opacity 0.3s ease;';
+                            
+                            container.appendChild(chunkDiv);
+                            
+                            // 淡入效果
+                            setTimeout(() => {
+                                chunkDiv.style.opacity = '1';
+                            }, 50);
+                            
+                        } catch (error) {
+                            console.error(`❌ 渲染块 ${currentChunk} 失败:`, error);
+                        }
+                    }
+                    
+                    currentChunk++;
+                    
+                                         // 使用策略中的延迟时间
+                     requestAnimationFrame(() => {
+                         setTimeout(renderNextChunk, strategy.delay);
+                     });
+                }
+                
+                renderNextChunk();
+            }
+            
+            // 处理增强功能
+            function processEnhancements(container) {
+                console.log('🔗 处理链接功能');
+                processLinks(container);
+                
+                console.log('🖼️ 处理图片功能');
+                addImageZoomFunction(container);
+                
+                console.log('📋 处理代码复制功能');
+                addCodeCopyButtons(container);
+                
+                console.log('☑️ 处理任务列表功能');
+                enhanceTaskLists(container);
+                
+                console.log('🎨 处理Mermaid图表');
+                renderMermaidDiagrams(container);
+                
+                console.log('📱 优化移动端表格');
+                optimizeTablesForMobile(container);
+                
+                console.log('🏷️ 优化HTML元素');
+                enhanceHTMLElements(container);
+                
+                console.log('📑 生成目录');
+                generateTOC();
+                
+                console.log('✅ 所有增强功能处理完成');
+                
+                // 最后渲染数学公式
+                setTimeout(() => {
+                    console.log('🧮 开始渲染LaTeX公式');
+                    if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+                        MathJax.typesetPromise([container])
+                        .then(() => {
+                            console.log('✅ LaTeX渲染完成');
+                        })
+                        .catch((err) => {
+                            console.error('❌ LaTeX渲染错误:', err);
+                        });
+                    }
+                }, 200);
+            }
+            
+            // 获取最佳分块策略
+            function getOptimalChunkStrategy(contentSize) {
+                if (contentSize < 10000) { // 小于10KB
+                    return {
+                        name: "快速渲染",
+                        chunkType: "paragraph",
+                        maxChunkSize: 8, // 每块最多8个段落
+                        delay: 30 // 30ms间隔
+                    };
+                } else if (contentSize < 50000) { // 10KB - 50KB
+                    return {
+                        name: "优化渲染",
+                        chunkType: "paragraph",
+                        maxChunkSize: 5, // 每块最多5个段落
+                        delay: 50 // 50ms间隔
+                    };
+                } else if (contentSize < 100000) { // 50KB - 100KB
+                    return {
+                        name: "分块渲染",
+                        chunkType: "paragraph",
+                        maxChunkSize: 3, // 每块最多3个段落
+                        delay: 80 // 80ms间隔
+                    };
+                } else { // 大于100KB
+                    return {
+                        name: "深度优化渲染",
+                        chunkType: "paragraph",
+                        maxChunkSize: 2, // 每块最多2个段落
+                        delay: 100 // 100ms间隔
+                    };
+                }
+            }
+            
+            // 根据策略分块内容
+            function chunkContentByStrategy(content, strategy) {
+                // 按段落分割
+                const paragraphs = content.split('\n\n').filter(p => p.trim().length > 0);
+                const chunks = [];
+                
+                if (strategy.chunkType === "paragraph") {
+                    // 按段落数量分块
+                    for (let i = 0; i < paragraphs.length; i += strategy.maxChunkSize) {
+                        const chunkParagraphs = paragraphs.slice(i, i + strategy.maxChunkSize);
+                        chunks.push(chunkParagraphs.join('\n\n'));
+                    }
+                }
+                
+                // 确保至少有一个块
+                if (chunks.length === 0) {
+                    chunks.push(content);
+                }
+                
+                return chunks;
+            }
         </script>
         
     </body>

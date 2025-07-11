@@ -17,12 +17,12 @@ class SubjectGroup {
     let gradientColors: [UIColor]
     var isExpanded: Bool
     
-    init(title: String, files: [MarkdownFile], iconName: String, gradientColors: [UIColor]) {
+    init(title: String, files: [MarkdownFile], iconName: String, gradientColors: [UIColor], isExpanded: Bool = true) {
         self.title = title
         self.files = files
         self.iconName = iconName
         self.gradientColors = gradientColors
-        self.isExpanded = true
+        self.isExpanded = isExpanded
     }
     
     var fileCount: Int { files.count }
@@ -205,6 +205,26 @@ class FileListViewController: UIViewController {
     private let recentFileManager = RecentFileManager.shared
     private var isSearching = false
     private var currentSearchText = ""
+    
+    // MARK: - 分组状态管理
+    private let groupStatesKey = "SubjectGroupExpandedStates"
+    
+    /// 保存分组展开状态到UserDefaults
+    private func saveGroupStates() {
+        var states: [String: Bool] = [:]
+        for group in subjectGroups {
+            states[group.title] = group.isExpanded
+        }
+        UserDefaults.standard.set(states, forKey: groupStatesKey)
+        print("💾 已保存分组状态: \(states)")
+    }
+    
+    /// 从UserDefaults恢复分组展开状态
+    private func loadGroupStates() -> [String: Bool] {
+        let states = UserDefaults.standard.dictionary(forKey: groupStatesKey) as? [String: Bool] ?? [:]
+        print("📂 已加载分组状态: \(states)")
+        return states
+    }
     
     // MARK: - 约束
     private var currentCollectionViewHeight: CGFloat = 100
@@ -559,6 +579,9 @@ class FileListViewController: UIViewController {
     }
     
     private func organizeSubjectGroups() {
+        // 加载保存的分组状态
+        let savedStates = loadGroupStates()
+        
         // 按学科分组
         let groupedFiles = Dictionary(grouping: markdownFiles) { file in
             let pathComponents = file.relativePath.components(separatedBy: "/")
@@ -573,11 +596,16 @@ class FileListViewController: UIViewController {
             if !files.isEmpty {
                 let sortedFiles = files.sorted { $0.displayName < $1.displayName }
                 let (iconName, gradientColors) = getSubjectStyle(for: subject)
+                
+                // 恢复之前保存的展开状态，如果没有保存过则默认为展开
+                let isExpanded = savedStates[subject] ?? true
+                
                 let group = SubjectGroup(
                     title: subject,
-                files: sortedFiles,
+                    files: sortedFiles,
                     iconName: iconName,
-                    gradientColors: gradientColors
+                    gradientColors: gradientColors,
+                    isExpanded: isExpanded
                 )
                 subjectGroups.append(group)
             }
@@ -1129,7 +1157,7 @@ class FileListViewController: UIViewController {
             }
         } catch {
             print("❌ 获取文件大小失败: \(error)")
-        }
+            }
         return "未知"
     }
     
@@ -1151,13 +1179,13 @@ class FileListViewController: UIViewController {
                     // 尝试直接打开XMind应用（不传递文件）
                     // 用户需要手动导入文件
                     UIApplication.shared.open(schemeURL) { success in
-                        if success {
+                            if success {
                             print("✅ 成功打开XMind应用: \(scheme)")
                             print("ℹ️ 注意：文件已准备在共享目录，用户需要手动导入")
-                        } else {
+                            } else {
                             print("❌ 打开XMind应用失败: \(scheme)")
+                            }
                         }
-                    }
                     return false // 返回false继续使用文档交互控制器
                 }
             }
@@ -1721,6 +1749,11 @@ extension FileListViewController: UICollectionViewDelegate {
         
         let group = groupsToUse[section]
         group.isExpanded.toggle()
+        
+        // 保存分组状态到UserDefaults
+        if !isSearching {
+            saveGroupStates()
+        }
         
         // 先更新高度，再执行动画
         updateCollectionViewHeight(animated: true)
@@ -2577,9 +2610,9 @@ class RecentFileCell: UITableViewCell {
             let days = Int(interval / 86400)
             return "\(days)天前"
         } else {
-            let formatter = DateFormatter()
+        let formatter = DateFormatter()
             formatter.dateFormat = "MM.dd"
-            return formatter.string(from: date)
+        return formatter.string(from: date)
         }
     }
     

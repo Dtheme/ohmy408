@@ -161,13 +161,13 @@ class ToastManager {
             make.centerX.equalTo(view)
             make.leading.greaterThanOrEqualTo(view).offset(20)
             make.trailing.lessThanOrEqualTo(view).offset(-20)
-            
-            switch position {
-            case .top:
+        
+        switch position {
+        case .top:
                 make.top.equalTo(view.safeAreaLayoutGuide.snp.top).offset(position.offset)
-            case .center:
+        case .center:
                 make.centerY.equalTo(view).offset(position.offset)
-            case .bottom:
+        case .bottom:
                 make.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom).offset(position.offset)
             }
         }
