@@ -177,6 +177,276 @@ class MarkdownReaderViewController: UIViewController {
     private var themeInitRetryCount: Int = 0
     private let maxThemeInitRetryCount: Int = 3
     
+    // MARK: - 加载状态管理
+    
+    /// 加载步骤枚举
+    private enum LoadingStep: CaseIterable {
+        case initializing       // 初始化
+        case loadingTemplate    // 加载模板
+        case readingFile        // 读取文件
+        case preparingRenderer  // 准备渲染器
+        case analyzing          // 分析内容
+        case chunking          // 智能分块
+        case rendering         // 渲染内容
+        case enhancing         // 增强功能
+        case finalizing        // 完成处理
+        
+        var title: String {
+            switch self {
+            case .initializing: return "初始化"
+            case .loadingTemplate: return "加载渲染引擎"
+            case .readingFile: return "读取文件内容"
+            case .preparingRenderer: return "准备渲染环境"
+            case .analyzing: return "分析文档结构"
+            case .chunking: return "智能分块处理"
+            case .rendering: return "渲染Markdown"
+            case .enhancing: return "处理增强功能"
+            case .finalizing: return "完成渲染"
+            }
+        }
+        
+        var subtitle: String {
+            switch self {
+            case .initializing: return "准备加载文档..."
+            case .loadingTemplate: return "加载HTML模板和JavaScript引擎..."
+            case .readingFile: return "从存储中读取文档内容..."
+            case .preparingRenderer: return "初始化Markdown渲染器..."
+            case .analyzing: return "检测代码块、表格、图表等结构..."
+            case .chunking: return "为大文档进行智能分块..."
+            case .rendering: return "将Markdown转换为HTML..."
+            case .enhancing: return "处理LaTeX公式、Mermaid图表..."
+            case .finalizing: return "优化显示效果..."
+            }
+        }
+        
+        var baseProgress: Double {
+            let allSteps = LoadingStep.allCases
+            let currentIndex = allSteps.firstIndex(of: self) ?? 0
+            return Double(currentIndex) / Double(allSteps.count - 1)
+        }
+        
+        var progressWeight: Double {
+            switch self {
+            case .initializing: return 0.05   // 5%
+            case .loadingTemplate: return 0.15  // 15%
+            case .readingFile: return 0.08     // 8%
+            case .preparingRenderer: return 0.07  // 7%
+            case .analyzing: return 0.08       // 8%
+            case .chunking: return 0.07        // 7%
+            case .rendering: return 0.35       // 35%
+            case .enhancing: return 0.12       // 12%
+            case .finalizing: return 0.03      // 3%
+            }
+        }
+    }
+    
+    /// 当前加载状态
+    private struct LoadingState {
+        var currentStep: LoadingStep = .initializing
+        var stepProgress: Double = 0.0  // 当前步骤内的进度 (0.0-1.0)
+        var totalProgress: Double {
+            let previousStepsProgress = LoadingStep.allCases
+                .prefix(upTo: LoadingStep.allCases.firstIndex(of: currentStep) ?? 0)
+                .reduce(0.0) { $0 + $1.progressWeight }
+            let currentStepProgress = previousStepsProgress + (currentStep.progressWeight * stepProgress)
+            // 确保总进度不超过100%
+            return min(currentStepProgress, 1.0)
+        }
+        var startTime: Date = Date()
+        var estimatedTimeRemaining: TimeInterval? {
+            guard totalProgress > 0.1 else { return nil }
+            let elapsed = Date().timeIntervalSince(startTime)
+            let estimatedTotal = elapsed / totalProgress
+            return max(0, estimatedTotal - elapsed)
+        }
+    }
+    
+    private var loadingState = LoadingState()
+    
+    /// 详细的加载标签
+    private lazy var detailLabel: UILabel = {
+        let label = UILabel()
+        label.font = UIFont.systemFont(ofSize: 14, weight: .regular)
+        label.textColor = UIColor.tertiaryLabel
+        label.textAlignment = .center
+        label.numberOfLines = 2
+        label.isHidden = true
+        return label
+    }()
+    
+    /// 时间估算标签
+    private lazy var timeLabel: UILabel = {
+        let label = UILabel()
+        label.font = UIFont.systemFont(ofSize: 12, weight: .medium)
+        label.textColor = UIColor.quaternaryLabel
+        label.textAlignment = .center
+        label.isHidden = true
+        return label
+    }()
+    
+    /// 步骤指示器
+    private lazy var stepIndicator: UIView = {
+        let container = UIView()
+        container.isHidden = true
+        return container
+    }()
+    
+    /// 更新加载状态
+    private func updateLoadingState(step: LoadingStep, progress: Double = 0.0, detail: String? = nil) {
+        loadingState.currentStep = step
+        loadingState.stepProgress = max(0.0, min(1.0, progress))
+        
+        let percentage = Int(loadingState.totalProgress * 100)
+        let mainMessage = "\(step.title) (\(percentage)%)"
+        let detailMessage = detail ?? step.subtitle
+        
+        loadingIndicator.startAnimating()
+        loadingLabel.text = mainMessage
+        loadingLabel.isHidden = false
+        
+        detailLabel.text = detailMessage
+        detailLabel.isHidden = false
+        
+        progressView.isHidden = false
+        progressView.setProgress(Float(loadingState.totalProgress), animated: true)
+        
+        // 更新时间估算
+        updateTimeEstimate()
+        
+        // 更新步骤指示器
+        updateStepIndicator()
+        
+        hideError()
+        
+        print("📊 加载进度: \(step.title) \(Int(loadingState.totalProgress * 100))% - \(detailMessage)")
+    }
+    
+    /// 更新时间估算
+    private func updateTimeEstimate() {
+        if let remainingTime = loadingState.estimatedTimeRemaining {
+            if remainingTime > 60 {
+                let minutes = Int(remainingTime / 60)
+                timeLabel.text = "预计还需 \(minutes) 分钟"
+            } else if remainingTime > 5 {
+                let seconds = Int(remainingTime)
+                timeLabel.text = "预计还需 \(seconds) 秒"
+            } else {
+                timeLabel.text = "即将完成..."
+            }
+            timeLabel.isHidden = false
+        } else {
+            timeLabel.isHidden = true
+        }
+    }
+    
+    /// 更新步骤指示器
+    private func updateStepIndicator() {
+        stepIndicator.subviews.forEach { $0.removeFromSuperview() }
+        
+        let allSteps = LoadingStep.allCases
+        let currentStepIndex = allSteps.firstIndex(of: loadingState.currentStep) ?? 0
+        
+        let stackView = UIStackView()
+        stackView.axis = .horizontal
+        stackView.spacing = 4
+        stackView.distribution = .fillEqually
+        
+        for (index, _) in allSteps.enumerated() {
+            let dot = UIView()
+            dot.layer.cornerRadius = 3
+            dot.snp.makeConstraints { make in
+                make.width.height.equalTo(6)
+            }
+            
+            if index < currentStepIndex {
+                // 已完成的步骤 - 绿色
+                dot.backgroundColor = UIColor.systemGreen
+            } else if index == currentStepIndex {
+                // 当前步骤 - 蓝色
+                dot.backgroundColor = UIColor.systemBlue
+            } else {
+                // 未来的步骤 - 灰色
+                dot.backgroundColor = UIColor.systemGray4
+            }
+            
+            stackView.addArrangedSubview(dot)
+        }
+        
+        stepIndicator.addSubview(stackView)
+        stackView.snp.makeConstraints { make in
+            make.center.equalToSuperview()
+        }
+        
+        stepIndicator.isHidden = false
+    }
+    
+    /// 重置加载状态
+    private func resetLoadingState() {
+        loadingState = LoadingState()
+        
+        // 调试：验证权重分配
+        #if DEBUG
+        validateProgressWeights()
+        #endif
+    }
+    
+    /// 验证进度权重分配是否正确
+    private func validateProgressWeights() {
+        let totalWeight = LoadingStep.allCases.reduce(0.0) { $0 + $1.progressWeight }
+        if abs(totalWeight - 1.0) > 0.001 { // 允许小数点精度误差
+            print("⚠️ 警告: 进度权重总和为 \(totalWeight * 100)%，应该为100%")
+        } else {
+            print("✅ 进度权重分配验证通过: \(Int(totalWeight * 100))%")
+        }
+    }
+    
+    /// 显示详细的加载状态
+    private func showDetailedLoadingState(step: LoadingStep, progress: Double = 0.0, detail: String? = nil) {
+        updateLoadingState(step: step, progress: progress, detail: detail)
+    }
+    
+    /// 隐藏加载状态
+    private func hideLoadingState() {
+        loadingIndicator.stopAnimating()
+        loadingLabel.isHidden = true
+        detailLabel.isHidden = true
+        timeLabel.isHidden = true
+        progressView.isHidden = true
+        stepIndicator.isHidden = true
+        progressView.setProgress(0, animated: false)
+        
+        print("✅ 加载完成，总耗时: \(Date().timeIntervalSince(loadingState.startTime))秒")
+    }
+    
+    // MARK: - 原有的简单方法（保持兼容性）
+    private func showLoadingState(message: String, progress: Double) {
+        // 尝试从消息中推断当前步骤
+        let step = inferStepFromMessage(message)
+        // 确保进度在合理范围内
+        let safeProgress = max(0.0, min(1.0, progress))
+        updateLoadingState(step: step, progress: safeProgress, detail: message)
+    }
+    
+    private func inferStepFromMessage(_ message: String) -> LoadingStep {
+        if message.contains("渲染器") || message.contains("模板") {
+            return .loadingTemplate
+        } else if message.contains("读取") || message.contains("文件") {
+            return .readingFile
+        } else if message.contains("准备") || message.contains("环境") {
+            return .preparingRenderer
+        } else if message.contains("分块") || message.contains("分析") {
+            return .analyzing
+        } else if message.contains("渲染") {
+            return .rendering
+        } else if message.contains("处理") || message.contains("增强") {
+            return .enhancing
+        } else if message.contains("完成") || message.contains("最后") {
+            return .finalizing
+        } else {
+            return .initializing
+        }
+    }
+    
     // MARK: - WebView辅助方法
     private func hideWKBackdropView(in webView: WKWebView) {
         // 递归遍历WebView的子视图，彻底清理所有可能的边框和背景
@@ -350,7 +620,10 @@ class MarkdownReaderViewController: UIViewController {
         // 设置加载指示器和相关组件
         view.addSubview(loadingIndicator)
         view.addSubview(loadingLabel)
+        view.addSubview(detailLabel)
         view.addSubview(progressView)
+        view.addSubview(timeLabel)
+        view.addSubview(stepIndicator)
         
         loadingIndicator.snp.makeConstraints { make in
             make.centerX.equalTo(webViewContainer)
@@ -478,7 +751,8 @@ class MarkdownReaderViewController: UIViewController {
         print("🔄 开始加载HTML模板")
         isTemplateLoading = true
         themeInitRetryCount = 0 // 重置主题初始化重试计数器
-        showLoadingState(message: "正在加载渲染器...", progress: 0.1)
+        resetLoadingState()
+        showDetailedLoadingState(step: .loadingTemplate, progress: 0.1, detail: "初始化HTML模板和JavaScript引擎...")
         
         let request = URLRequest(url: htmlURL)
         webView.load(request)
@@ -494,23 +768,25 @@ class MarkdownReaderViewController: UIViewController {
         // 确保HTML模板已开始加载
         loadHTMLTemplateIfNeeded()
         
-        showLoadingState(message: "正在读取文件...", progress: 0.3)
+        showDetailedLoadingState(step: .readingFile, progress: 0.2, detail: "从存储设备读取\(file.displayName)...")
         
         // 异步读取文件内容以避免阻塞UI
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             do {
                 let content = try String(contentsOf: file.url, encoding: .utf8)
+                let fileSize = content.count
+                let fileSizeText = self?.formatFileSize(fileSize) ?? "\(fileSize) 字符"
                 
                 DispatchQueue.main.async {
                     self?.markdownContent = content
                     self?.pendingMarkdownContent = content
-                    print("📄 Markdown内容已读取，等待HTML模板加载完成")
+                    print("📄 Markdown内容已读取，文件大小: \(fileSize) 字符")
                     
                     // 如果HTML模板已加载完成，立即渲染
                     if self?.isHTMLTemplateLoaded == true {
                         self?.renderMarkdownContent()
                     } else {
-                        self?.showLoadingState(message: "等待渲染器加载...", progress: 0.6)
+                        self?.showDetailedLoadingState(step: .preparingRenderer, progress: 0.8, detail: "等待渲染引擎就绪，文件大小: \(fileSizeText)")
                     }
                 }
             } catch {
@@ -518,6 +794,17 @@ class MarkdownReaderViewController: UIViewController {
                     self?.showError(message: "无法读取文件内容: \(error.localizedDescription)")
                 }
             }
+        }
+    }
+    
+    /// 格式化文件大小
+    private func formatFileSize(_ size: Int) -> String {
+        if size < 1024 {
+            return "\(size) 字符"
+        } else if size < 1024 * 1024 {
+            return String(format: "%.1f KB", Double(size) / 1024.0)
+        } else {
+            return String(format: "%.1f MB", Double(size) / (1024.0 * 1024.0))
         }
     }
     
@@ -536,7 +823,7 @@ class MarkdownReaderViewController: UIViewController {
         
         print("🎨 开始渲染Markdown内容")
         hideError()
-        showLoadingState(message: "正在渲染内容...", progress: 0.8)
+        showDetailedLoadingState(step: .analyzing, progress: 0.1, detail: "分析文档结构...")
         retryCount = 0 // 重置重试计数
         renderOptimizedMarkdown()
     }
@@ -556,16 +843,38 @@ class MarkdownReaderViewController: UIViewController {
         }
         
         let contentSize = markdownContent.count
-        print("🔄 开始统一分块渲染，文件大小: \(contentSize) 字符")
+        let fileSizeText = formatFileSize(contentSize)
+        print("🔄 开始智能分块渲染，文件大小: \(contentSize) 字符")
         
-        // 根据文件大小智能调整分块策略
-        let (chunkSize, delayInterval, progressMessage) = getChunkStrategy(for: contentSize)
+        showDetailedLoadingState(step: .analyzing, progress: 0.3, detail: "分析\(fileSizeText)的文档结构...")
         
-        // 按行分割内容
-        let lines = markdownContent.components(separatedBy: .newlines)
-        let totalLines = lines.count
-        
-        showLoadingState(message: progressMessage, progress: 0.8)
+        // 异步进行分块分析，避免阻塞UI
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            // 根据文件大小智能调整分块策略
+            let strategy = self.getIntelligentChunkStrategy(for: contentSize)
+            
+            DispatchQueue.main.async {
+                self.showDetailedLoadingState(step: .chunking, progress: 0.1, detail: "使用\(strategy.name)策略进行智能分块...")
+            }
+            
+            // 使用智能分块算法，保持markdown结构完整
+            let chunks = self.intelligentChunkContent(self.markdownContent, strategy: strategy)
+            let totalChunks = chunks.count
+            
+            DispatchQueue.main.async {
+                self.showDetailedLoadingState(step: .rendering, progress: 0.0, detail: "准备渲染\(totalChunks)个文档块...")
+                
+                // 初始化渲染环境
+                self.initializeChunkRendering(chunks: chunks, strategy: strategy, contentSize: contentSize)
+            }
+        }
+    }
+    
+    /// 初始化分块渲染环境
+    private func initializeChunkRendering(chunks: [String], strategy: IntelligentChunkStrategy, contentSize: Int) {
+        let totalChunks = chunks.count
         
         // 初始化渲染环境
         let initScript = """
@@ -582,15 +891,14 @@ class MarkdownReaderViewController: UIViewController {
                 // 初始化分块渲染状态
                 window.chunkRenderState = {
                     container: chunkContainer,
-                    totalChunks: Math.ceil(\(totalLines) / \(chunkSize)),
+                    totalChunks: \(totalChunks),
                     renderedChunks: 0,
                     isRendering: false,
-                    chunkSize: \(chunkSize),
-                    delayInterval: \(delayInterval)
+                    delayInterval: \(strategy.delayInterval)
                 };
                 
-                console.log('✅ 统一分块渲染环境初始化完成');
-                console.log('📊 文件大小: \(contentSize) 字符, 总行数: \(totalLines), 块大小: \(chunkSize) 行, 总块数: ' + window.chunkRenderState.totalChunks);
+                console.log('✅ 智能分块渲染环境初始化完成');
+                console.log('📊 文件大小: \(contentSize) 字符, 总块数: \(totalChunks), 平均块大小: ' + Math.round(\(contentSize) / \(totalChunks)) + ' 字符');
                 'init_success';
             } catch(e) {
                 console.error('❌ 分块渲染初始化失败:', e);
@@ -607,7 +915,8 @@ class MarkdownReaderViewController: UIViewController {
             
             if let resultString = result as? String, resultString == "init_success" {
                 print("✅ 分块渲染环境初始化成功")
-                self?.renderNextChunk(lines: lines, chunkSize: chunkSize, currentIndex: 0, delayInterval: delayInterval)
+                self?.showDetailedLoadingState(step: .rendering, progress: 0.1, detail: "开始渲染第1个文档块...")
+                self?.renderIntelligentChunk(chunks: chunks, currentIndex: 0, strategy: strategy)
             } else {
                 print("❌ 分块渲染初始化失败，回退到完整渲染")
                 self?.performCompleteMarkdownRender()
@@ -615,37 +924,689 @@ class MarkdownReaderViewController: UIViewController {
         }
     }
     
-    /// 根据文件大小获取最佳分块策略
-    private func getChunkStrategy(for contentSize: Int) -> (chunkSize: Int, delayInterval: TimeInterval, progressMessage: String) {
+    /// 智能分块策略结构
+    private struct IntelligentChunkStrategy {
+        let name: String
+        let maxChunkSize: Int          // 最大块大小（字符数）
+        let delayInterval: TimeInterval // 渲染间隔
+        let progressMessage: String
+    }
+    
+    /// 根据文件大小获取智能分块策略
+    private func getIntelligentChunkStrategy(for contentSize: Int) -> IntelligentChunkStrategy {
         if contentSize < 10000 { // 小于10KB
-            return (chunkSize: 200, delayInterval: 0.05, progressMessage: "快速渲染中...")
+            return IntelligentChunkStrategy(
+                name: "快速渲染",
+                maxChunkSize: 8000,
+                delayInterval: 0.05,
+                progressMessage: "快速渲染中..."
+            )
         } else if contentSize < 50000 { // 10KB - 50KB
-            return (chunkSize: 100, delayInterval: 0.08, progressMessage: "优化渲染中...")
+            return IntelligentChunkStrategy(
+                name: "优化渲染",
+                maxChunkSize: 5000,
+                delayInterval: 0.08,
+                progressMessage: "优化渲染中..."
+            )
         } else if contentSize < 100000 { // 50KB - 100KB
-            return (chunkSize: 75, delayInterval: 0.1, progressMessage: "分块渲染中...")
+            return IntelligentChunkStrategy(
+                name: "分块渲染",
+                maxChunkSize: 3000,
+                delayInterval: 0.1,
+                progressMessage: "分块渲染中..."
+            )
         } else { // 大于100KB
-            return (chunkSize: 50, delayInterval: 0.12, progressMessage: "深度优化渲染中...")
+            return IntelligentChunkStrategy(
+                name: "深度优化渲染",
+                maxChunkSize: 2000,
+                delayInterval: 0.12,
+                progressMessage: "深度优化渲染中..."
+            )
         }
     }
     
-    private func renderNextChunk(lines: [String], chunkSize: Int, currentIndex: Int, delayInterval: TimeInterval) {
-        guard currentIndex < lines.count else {
-            print("✅ 所有分块渲染完成")
+    /// 智能分块内容，保持markdown结构完整
+    private func intelligentChunkContent(_ content: String, strategy: IntelligentChunkStrategy) -> [String] {
+        let lines = content.components(separatedBy: .newlines)
+        var chunks: [String] = []
+        var currentChunk: [String] = []
+        var currentChunkSize = 0
+        var i = 0
+        
+        print("🧠 开始智能分块，总行数: \(lines.count)，最大块大小: \(strategy.maxChunkSize) 字符")
+        
+        while i < lines.count {
+            let line = lines[i]
+            let lineLength = line.count + 1 // +1 for newline
+            
+            // 检查是否遇到需要保持完整的markdown结构
+            if let blockEnd = detectMarkdownBlock(lines: lines, startIndex: i) {
+                // 发现完整的markdown块
+                let blockLines = Array(lines[i...blockEnd])
+                let blockContent = blockLines.joined(separator: "\n")
+                let blockSize = blockContent.count
+                
+                print("📦 发现markdown结构块: \(blockLines.first?.prefix(50) ?? "")... (行\(i+1)-\(blockEnd+1), \(blockSize)字符)")
+                
+                // 如果当前块加上这个结构块会超过限制，先保存当前块
+                if !currentChunk.isEmpty && currentChunkSize + blockSize > strategy.maxChunkSize {
+                    // 在保存当前块前，检查并扩展到完整结构
+                    let extendedChunk = extendChunkToCompleteStructure(
+                        currentChunk: currentChunk, 
+                        allLines: lines, 
+                        chunkEndIndex: i - 1,
+                        strategy: strategy
+                    )
+                    
+                    chunks.append(extendedChunk.content)
+                    print("💾 保存扩展块 \(chunks.count): \(extendedChunk.content.count) 字符 (扩展了\(extendedChunk.extensionSize)字符)")
+                    currentChunk = []
+                    currentChunkSize = 0
+                }
+                
+                // 将整个结构块添加到当前块
+                currentChunk.append(contentsOf: blockLines)
+                currentChunkSize += blockSize
+                
+                // 如果结构块本身就很大，立即保存为独立块
+                if blockSize > strategy.maxChunkSize / 2 {
+                    let chunkContent = currentChunk.joined(separator: "\n")
+                    chunks.append(chunkContent)
+                    print("💾 保存大结构块 \(chunks.count): \(currentChunkSize) 字符")
+                    currentChunk = []
+                    currentChunkSize = 0
+                }
+                
+                i = blockEnd + 1
+                continue
+            }
+            
+            // 普通行处理
+            if currentChunkSize + lineLength > strategy.maxChunkSize && !currentChunk.isEmpty {
+                // 当前块已满，但在切分前检查是否需要扩展到完整结构
+                let extendedChunk = extendChunkToCompleteStructure(
+                    currentChunk: currentChunk,
+                    allLines: lines,
+                    chunkEndIndex: i - 1,
+                    strategy: strategy
+                )
+                
+                chunks.append(extendedChunk.content)
+                print("💾 保存智能扩展块 \(chunks.count): \(extendedChunk.content.count) 字符 (扩展了\(extendedChunk.extensionSize)字符)")
+                currentChunk = []
+                currentChunkSize = 0
+            }
+            
+            currentChunk.append(line)
+            currentChunkSize += lineLength
+            i += 1
+        }
+        
+        // 保存最后一个块（也需要检查扩展）
+        if !currentChunk.isEmpty {
+            let extendedChunk = extendChunkToCompleteStructure(
+                currentChunk: currentChunk,
+                allLines: lines,
+                chunkEndIndex: lines.count - 1,
+                strategy: strategy
+            )
+            
+            chunks.append(extendedChunk.content)
+            print("💾 保存最后块 \(chunks.count): \(extendedChunk.content.count) 字符 (扩展了\(extendedChunk.extensionSize)字符)")
+        }
+        
+        print("🧠 智能分块完成，共 \(chunks.count) 个块")
+        return chunks.isEmpty ? [content] : chunks
+    }
+    
+    /// 扩展块到完整结构的结果
+    private struct ChunkExtensionResult {
+        let content: String
+        let extensionSize: Int
+    }
+    
+    /// 将块扩展到完整的markdown结构
+    private func extendChunkToCompleteStructure(
+        currentChunk: [String],
+        allLines: [String],
+        chunkEndIndex: Int,
+        strategy: IntelligentChunkStrategy
+    ) -> ChunkExtensionResult {
+        
+        let originalContent = currentChunk.joined(separator: "\n")
+        let originalSize = originalContent.count
+        
+        // 检查块结尾是否处于不完整的结构中
+        let structureExtension = detectIncompleteStructureAtEnd(
+            chunkLines: currentChunk,
+            allLines: allLines,
+            chunkEndIndex: chunkEndIndex,
+            maxExtensionSize: strategy.maxChunkSize / 4 // 最多扩展25%
+        )
+        
+        if structureExtension.shouldExtend {
+            let extendedLines = currentChunk + structureExtension.extensionLines
+            let extendedContent = extendedLines.joined(separator: "\n")
+            let extensionSize = extendedContent.count - originalSize
+            
+            print("🔧 结构扩展: \(structureExtension.reason) +\(structureExtension.extensionLines.count)行")
+            
+            return ChunkExtensionResult(
+                content: extendedContent,
+                extensionSize: extensionSize
+            )
+        }
+        
+        return ChunkExtensionResult(
+            content: originalContent,
+            extensionSize: 0
+        )
+    }
+    
+    /// 结构扩展信息
+    private struct StructureExtension {
+        let shouldExtend: Bool
+        let extensionLines: [String]
+        let reason: String
+    }
+    
+    /// 检测块末尾的不完整结构
+    private func detectIncompleteStructureAtEnd(
+        chunkLines: [String],
+        allLines: [String],
+        chunkEndIndex: Int,
+        maxExtensionSize: Int
+    ) -> StructureExtension {
+        
+        guard chunkEndIndex < allLines.count - 1 else {
+            return StructureExtension(shouldExtend: false, extensionLines: [], reason: "已到文件末尾")
+        }
+        
+        // 1. 检查是否在代码块中间
+        if let codeBlockExtension = detectIncompleteCodeBlock(
+            chunkLines: chunkLines,
+            allLines: allLines,
+            chunkEndIndex: chunkEndIndex,
+            maxExtensionSize: maxExtensionSize
+        ) {
+            return codeBlockExtension
+        }
+        
+        // 2. 检查是否在表格中间  
+        if let tableExtension = detectIncompleteTable(
+            chunkLines: chunkLines,
+            allLines: allLines,
+            chunkEndIndex: chunkEndIndex,
+            maxExtensionSize: maxExtensionSize
+        ) {
+            return tableExtension
+        }
+        
+        // 3. 检查是否在列表中间
+        if let listExtension = detectIncompleteList(
+            chunkLines: chunkLines,
+            allLines: allLines,
+            chunkEndIndex: chunkEndIndex,
+            maxExtensionSize: maxExtensionSize
+        ) {
+            return listExtension
+        }
+        
+        // 4. 检查是否在HTML块中间
+        if let htmlExtension = detectIncompleteHTMLBlock(
+            chunkLines: chunkLines,
+            allLines: allLines,
+            chunkEndIndex: chunkEndIndex,
+            maxExtensionSize: maxExtensionSize
+        ) {
+            return htmlExtension
+        }
+        
+        // 5. 检查是否在引用块中间
+        if let quoteExtension = detectIncompleteQuoteBlock(
+            chunkLines: chunkLines,
+            allLines: allLines,
+            chunkEndIndex: chunkEndIndex,
+            maxExtensionSize: maxExtensionSize
+        ) {
+            return quoteExtension
+        }
+        
+        return StructureExtension(shouldExtend: false, extensionLines: [], reason: "无需扩展")
+    }
+    
+    /// 检测不完整的代码块
+    private func detectIncompleteCodeBlock(
+        chunkLines: [String],
+        allLines: [String],
+        chunkEndIndex: Int,
+        maxExtensionSize: Int
+    ) -> StructureExtension? {
+        
+        // 检查块内是否有未闭合的代码块
+        var codeBlockStartCount = 0
+        var codeBlockEndCount = 0
+        
+        for line in chunkLines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("```") {
+                if codeBlockStartCount == codeBlockEndCount {
+                    codeBlockStartCount += 1
+                } else {
+                    codeBlockEndCount += 1
+                }
+            }
+        }
+        
+        // 如果有未闭合的代码块，查找结束标记
+        if codeBlockStartCount > codeBlockEndCount {
+            var extensionLines: [String] = []
+            var extensionSize = 0
+            
+            for i in (chunkEndIndex + 1)..<allLines.count {
+                let line = allLines[i]
+                extensionLines.append(line)
+                extensionSize += line.count + 1
+                
+                if extensionSize > maxExtensionSize {
+                    break
+                }
+                
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if trimmed.hasPrefix("```") {
+                    return StructureExtension(
+                        shouldExtend: true,
+                        extensionLines: extensionLines,
+                        reason: "代码块未闭合"
+                    )
+                }
+            }
+        }
+        
+        return nil
+    }
+    
+    /// 检测不完整的表格
+    private func detectIncompleteTable(
+        chunkLines: [String],
+        allLines: [String],
+        chunkEndIndex: Int,
+        maxExtensionSize: Int
+    ) -> StructureExtension? {
+        
+        // 检查最后几行是否是表格
+        let lastFewLines = Array(chunkLines.suffix(3))
+        var isInTable = false
+        
+        for line in lastFewLines {
+            if isTableRow(line) {
+                isInTable = true
+                break
+            }
+        }
+        
+        if isInTable {
+            var extensionLines: [String] = []
+            var extensionSize = 0
+            
+            // 继续包含表格的剩余行
+            for i in (chunkEndIndex + 1)..<allLines.count {
+                let line = allLines[i]
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                
+                // 如果不再是表格行且不是空行，停止扩展
+                if !trimmed.isEmpty && !isTableRow(line) {
+                    break
+                }
+                
+                extensionLines.append(line)
+                extensionSize += line.count + 1
+                
+                if extensionSize > maxExtensionSize {
+                    break
+                }
+                
+                // 如果遇到非空非表格行，表格结束
+                if !trimmed.isEmpty && !isTableRow(line) {
+                    break
+                }
+            }
+            
+            if !extensionLines.isEmpty {
+                return StructureExtension(
+                    shouldExtend: true,
+                    extensionLines: extensionLines,
+                    reason: "表格未完整"
+                )
+            }
+        }
+        
+        return nil
+    }
+    
+    /// 检测不完整的列表
+    private func detectIncompleteList(
+        chunkLines: [String],
+        allLines: [String],
+        chunkEndIndex: Int,
+        maxExtensionSize: Int
+    ) -> StructureExtension? {
+        
+        // 检查最后几行是否是列表
+        guard let lastLine = chunkLines.last else { return nil }
+        
+        if isListItem(lastLine) || (lastLine.trimmingCharacters(in: .whitespaces).isEmpty && 
+                                    chunkLines.dropLast().last.map(isListItem) == true) {
+            
+            let lastListIndent = getListIndent(lastLine)
+            var extensionLines: [String] = []
+            var extensionSize = 0
+            
+            // 继续包含列表的剩余项
+            for i in (chunkEndIndex + 1)..<allLines.count {
+                let line = allLines[i]
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                
+                // 空行继续
+                if trimmed.isEmpty {
+                    extensionLines.append(line)
+                    extensionSize += line.count + 1
+                    continue
+                }
+                
+                // 如果仍然是列表项或有更深的缩进（列表内容），继续
+                if isListItem(trimmed) || getListIndent(line) > lastListIndent {
+                    extensionLines.append(line)
+                    extensionSize += line.count + 1
+                    
+                    if extensionSize > maxExtensionSize {
+                        break
+                    }
+                } else {
+                    // 列表结束
+                    break
+                }
+            }
+            
+            if !extensionLines.isEmpty {
+                return StructureExtension(
+                    shouldExtend: true,
+                    extensionLines: extensionLines,
+                    reason: "列表未完整"
+                )
+            }
+        }
+        
+        return nil
+    }
+    
+    /// 检测不完整的HTML块
+    private func detectIncompleteHTMLBlock(
+        chunkLines: [String],
+        allLines: [String],
+        chunkEndIndex: Int,
+        maxExtensionSize: Int
+    ) -> StructureExtension? {
+        
+        // 检查最后几行是否有未闭合的HTML标签
+        var openTags: [String] = []
+        
+        for line in chunkLines.suffix(5) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("<") && trimmed.contains(">") {
+                if let tagName = extractHTMLTagName(line) {
+                    if trimmed.contains("</\(tagName)>") {
+                        // 自闭合或同行闭合
+                        continue
+                    } else if !trimmed.hasSuffix("/>") {
+                        // 开放标签
+                        openTags.append(tagName)
+                    }
+                }
+            }
+        }
+        
+        if !openTags.isEmpty {
+            var extensionLines: [String] = []
+            var extensionSize = 0
+            var tagsToClose = openTags
+            
+            for i in (chunkEndIndex + 1)..<allLines.count {
+                let line = allLines[i]
+                extensionLines.append(line)
+                extensionSize += line.count + 1
+                
+                if extensionSize > maxExtensionSize {
+                    break
+                }
+                
+                // 检查是否包含闭合标签
+                for (index, tagName) in tagsToClose.enumerated().reversed() {
+                    if line.contains("</\(tagName)>") {
+                        tagsToClose.remove(at: index)
+                    }
+                }
+                
+                // 如果所有标签都闭合了，停止扩展
+                if tagsToClose.isEmpty {
+                    return StructureExtension(
+                        shouldExtend: true,
+                        extensionLines: extensionLines,
+                        reason: "HTML标签未闭合"
+                    )
+                }
+            }
+        }
+        
+        return nil
+    }
+    
+    /// 检测不完整的引用块
+    private func detectIncompleteQuoteBlock(
+        chunkLines: [String],
+        allLines: [String],
+        chunkEndIndex: Int,
+        maxExtensionSize: Int
+    ) -> StructureExtension? {
+        
+        // 检查最后几行是否是引用块
+        guard let lastLine = chunkLines.last else { return nil }
+        let trimmed = lastLine.trimmingCharacters(in: .whitespaces)
+        
+        if trimmed.hasPrefix(">") || (trimmed.isEmpty && 
+                                     chunkLines.dropLast().last?.trimmingCharacters(in: .whitespaces).hasPrefix(">") == true) {
+            
+            var extensionLines: [String] = []
+            var extensionSize = 0
+            
+            // 继续包含引用块的剩余内容
+            for i in (chunkEndIndex + 1)..<allLines.count {
+                let line = allLines[i]
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                
+                // 空行或继续的引用行
+                if trimmed.isEmpty || trimmed.hasPrefix(">") {
+                    extensionLines.append(line)
+                    extensionSize += line.count + 1
+                    
+                    if extensionSize > maxExtensionSize {
+                        break
+                    }
+                } else {
+                    // 引用块结束
+                    break
+                }
+            }
+            
+            if !extensionLines.isEmpty {
+                return StructureExtension(
+                    shouldExtend: true,
+                    extensionLines: extensionLines,
+                    reason: "引用块未完整"
+                )
+            }
+        }
+        
+        return nil
+    }
+    
+    /// 检测markdown结构块，返回结束行索引
+    private func detectMarkdownBlock(lines: [String], startIndex: Int) -> Int? {
+        guard startIndex < lines.count else { return nil }
+        
+        let line = lines[startIndex].trimmingCharacters(in: .whitespaces)
+        
+        // 1. 检测代码块 (```)
+        if line.hasPrefix("```") {
+            // 查找代码块结束
+            for i in (startIndex + 1)..<lines.count {
+                let endLine = lines[i].trimmingCharacters(in: .whitespaces)
+                if endLine.hasPrefix("```") {
+                    print("🔍 发现代码块: 行\(startIndex+1)-\(i+1)")
+                    return i
+                }
+            }
+            // 如果没找到结束标记，将剩余内容作为一个块
+            return lines.count - 1
+        }
+        
+        // 2. 检测表格
+        if line.contains("|") && isTableRow(line) {
+            // 查找表格结束
+            var endIndex = startIndex
+            for i in (startIndex + 1)..<lines.count {
+                let tableLine = lines[i].trimmingCharacters(in: .whitespaces)
+                if tableLine.isEmpty || !tableLine.contains("|") || !isTableRow(tableLine) {
+                    break
+                }
+                endIndex = i
+            }
+            if endIndex > startIndex {
+                print("🔍 发现表格: 行\(startIndex+1)-\(endIndex+1)")
+                return endIndex
+            }
+        }
+        
+        // 3. 检测标题后的内容块
+        if line.hasPrefix("#") {
+            // 查找下一个同级或更高级标题
+            let currentLevel = line.prefix(while: { $0 == "#" }).count
+            for i in (startIndex + 1)..<lines.count {
+                let nextLine = lines[i].trimmingCharacters(in: .whitespaces)
+                if nextLine.hasPrefix("#") {
+                    let nextLevel = nextLine.prefix(while: { $0 == "#" }).count
+                    if nextLevel <= currentLevel {
+                        print("🔍 发现标题块: 行\(startIndex+1)-\(i)")
+                        return i - 1
+                    }
+                }
+            }
+        }
+        
+        // 4. 检测列表块
+        if isListItem(line) {
+            var endIndex = startIndex
+            let listIndent = getListIndent(line)
+            
+            for i in (startIndex + 1)..<lines.count {
+                let listLine = lines[i]
+                let trimmedLine = listLine.trimmingCharacters(in: .whitespaces)
+                
+                // 空行继续
+                if trimmedLine.isEmpty {
+                    endIndex = i
+                    continue
+                }
+                
+                // 仍然是列表项或缩进内容
+                if isListItem(trimmedLine) || getListIndent(listLine) > listIndent {
+                    endIndex = i
+                } else {
+                    break
+                }
+            }
+            
+            if endIndex > startIndex {
+                print("🔍 发现列表块: 行\(startIndex+1)-\(endIndex+1)")
+                return endIndex
+            }
+        }
+        
+        // 5. 检测HTML块
+        if line.hasPrefix("<") && line.contains(">") {
+            // 简单的HTML块检测
+            if line.contains("</") || line.hasSuffix("/>") {
+                // 单行HTML
+                return startIndex
+            } else {
+                // 查找匹配的结束标签
+                if let tagName = extractHTMLTagName(line) {
+                    for i in (startIndex + 1)..<lines.count {
+                        let htmlLine = lines[i]
+                        if htmlLine.contains("</\(tagName)>") {
+                            print("🔍 发现HTML块: 行\(startIndex+1)-\(i+1)")
+                            return i
+                        }
+                    }
+                }
+            }
+        }
+        
+        return nil
+    }
+    
+    /// 判断是否为表格行
+    private func isTableRow(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        return trimmed.contains("|") && !trimmed.hasPrefix("|") && 
+               (trimmed.components(separatedBy: "|").count > 2 || trimmed.contains("---"))
+    }
+    
+    /// 判断是否为列表项
+    private func isListItem(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        return trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") || 
+               trimmed.hasPrefix("+ ") || 
+               trimmed.range(of: "^\\d+\\. ", options: .regularExpression) != nil
+    }
+    
+    /// 获取列表缩进级别
+    private func getListIndent(_ line: String) -> Int {
+        return line.count - line.trimmingCharacters(in: .whitespaces).count
+    }
+    
+    /// 提取HTML标签名
+    private func extractHTMLTagName(_ line: String) -> String? {
+        let pattern = "<([a-zA-Z][a-zA-Z0-9]*)"
+        if let regex = try? NSRegularExpression(pattern: pattern),
+           let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)),
+           let range = Range(match.range(at: 1), in: line) {
+            return String(line[range])
+        }
+        return nil
+    }
+    
+    private func renderIntelligentChunk(chunks: [String], currentIndex: Int, strategy: IntelligentChunkStrategy) {
+        guard currentIndex < chunks.count else {
+            print("✅ 所有智能分块渲染完成")
             finalizeChunkRendering()
             return
         }
         
-        let endIndex = min(currentIndex + chunkSize, lines.count)
-        let chunkLines = Array(lines[currentIndex..<endIndex])
-        let chunkContent = chunkLines.joined(separator: "\n")
-        let chunkNumber = (currentIndex / chunkSize) + 1
-        let totalChunks = (lines.count + chunkSize - 1) / chunkSize
+        let chunkContent = chunks[currentIndex]
+        let chunkNumber = currentIndex + 1
+        let totalChunks = chunks.count
         
-        // 更新进度
-        let progress = 0.8 + (0.2 * Double(currentIndex) / Double(lines.count))
-        showLoadingState(message: "渲染中... (\(chunkNumber)/\(totalChunks))", progress: progress)
+        // 更新详细进度
+        let renderingProgress = Double(currentIndex) / Double(totalChunks)
+        let detailText = if chunkContent.count > 1000 {
+            "渲染第\(chunkNumber)块 (共\(totalChunks)块) - \(formatFileSize(chunkContent.count))"
+        } else {
+            "渲染第\(chunkNumber)块 (共\(totalChunks)块) - \(chunkContent.count) 字符"
+        }
+        showDetailedLoadingState(step: .rendering, progress: renderingProgress, detail: detailText)
         
-        print("📄 渲染第\(chunkNumber)块 (行\(currentIndex+1)-\(endIndex))")
+        print("📄 渲染第\(chunkNumber)块 (共\(totalChunks)块, \(chunkContent.count)字符)")
         
         let escapedContent = escapeForJavaScript(chunkContent)
         
@@ -699,13 +1660,13 @@ class MarkdownReaderViewController: UIViewController {
                 switch resultString {
                 case "chunk_rendered":
                     // 延迟一点再渲染下一块，避免GPU过载
-                    DispatchQueue.main.asyncAfter(deadline: .now() + delayInterval) {
-                        self?.renderNextChunk(lines: lines, chunkSize: chunkSize, currentIndex: endIndex, delayInterval: delayInterval)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + strategy.delayInterval) {
+                        self?.renderIntelligentChunk(chunks: chunks, currentIndex: currentIndex + 1, strategy: strategy)
                     }
                 case "chunk_busy":
                     // 等待一下再重试
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        self?.renderNextChunk(lines: lines, chunkSize: chunkSize, currentIndex: currentIndex, delayInterval: delayInterval)
+                        self?.renderIntelligentChunk(chunks: chunks, currentIndex: currentIndex, strategy: strategy)
                     }
                 case "chunk_failed":
                     print("❌ 分块渲染失败，回退到完整渲染")
@@ -720,6 +1681,7 @@ class MarkdownReaderViewController: UIViewController {
     
     private func finalizeChunkRendering() {
         print("🎨 完成分块渲染，开始后处理...")
+        showDetailedLoadingState(step: .enhancing, progress: 0.0, detail: "处理LaTeX公式、Mermaid图表等...")
         
         let finalizeScript = """
             try {
@@ -768,13 +1730,12 @@ class MarkdownReaderViewController: UIViewController {
                 print("❌ 后处理失败: \(error)")
             }
             
+            self?.showDetailedLoadingState(step: .enhancing, progress: 0.7, detail: "渲染LaTeX数学公式...")
+            
             // 延迟渲染LaTeX公式
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self?.renderMathJax()
             }
-            
-            // 隐藏加载状态
-            self?.hideLoadingState()
         }
     }
     
@@ -786,27 +1747,87 @@ class MarkdownReaderViewController: UIViewController {
                 if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
                     var container = document.getElementById('rendered-content');
                     if (container) {
-                        MathJax.typesetPromise([container]).then(function() {
-                            console.log('✅ LaTeX渲染完成');
-                        }).catch(function(err) {
-                            console.error('❌ LaTeX渲染错误:', err);
-                        });
+                        // 异步执行MathJax渲染，避免返回Promise对象
+                        setTimeout(function() {
+                            MathJax.typesetPromise([container])
+                            .then(function() {
+                                console.log('✅ LaTeX渲染完成');
+                            })
+                            .catch(function(err) {
+                                console.error('❌ LaTeX渲染错误:', err);
+                            });
+                        }, 100);
+                        
+                        console.log('🧮 LaTeX渲染已启动');
+                        'math_started';
+                    } else {
+                        console.warn('⚠️ 未找到内容容器');
+                        'container_not_found';
+                    }
+                } else if (typeof MathJax !== 'undefined' && MathJax.typeset) {
+                    // 降级到传统的typeset方法
+                    var container = document.getElementById('rendered-content');
+                    if (container) {
+                        setTimeout(function() {
+                            try {
+                                MathJax.typeset([container]);
+                                console.log('✅ LaTeX渲染完成 (传统模式)');
+                            } catch (err) {
+                                console.error('❌ LaTeX渲染错误 (传统模式):', err);
+                            }
+                        }, 100);
+                        
+                        console.log('🧮 LaTeX渲染已启动 (传统模式)');
+                        'math_started_legacy';
+                    } else {
+                        'container_not_found';
                     }
                 } else {
-                    console.warn('⚠️ MathJax未加载或不支持typesetPromise');
+                    console.warn('⚠️ MathJax未加载或不支持渲染方法');
+                    'mathjax_not_available';
                 }
-                'math_started';
             } catch(e) {
                 console.error('❌ LaTeX渲染启动失败:', e);
                 'math_failed';
             }
         """
         
-        webView.evaluateJavaScript(mathScript) { (result, error) in
+        webView.evaluateJavaScript(mathScript) { [weak self] (result, error) in
             if let error = error {
                 print("❌ LaTeX渲染启动失败: \(error)")
-            } else {
-                print("✅ LaTeX渲染已启动")
+            } else if let resultString = result as? String {
+                switch resultString {
+                case "math_started":
+                    print("✅ LaTeX渲染已启动 (Promise模式)")
+                    self?.showDetailedLoadingState(step: .finalizing, progress: 0.3, detail: "LaTeX公式渲染中...")
+                case "math_started_legacy":
+                    print("✅ LaTeX渲染已启动 (传统模式)")
+                    self?.showDetailedLoadingState(step: .finalizing, progress: 0.3, detail: "LaTeX公式渲染中(兼容模式)...")
+                case "container_not_found":
+                    print("⚠️ 未找到内容容器，LaTeX渲染跳过")
+                    self?.showDetailedLoadingState(step: .finalizing, progress: 0.7, detail: "跳过LaTeX渲染，优化显示...")
+                case "mathjax_not_available":
+                    print("⚠️ MathJax不可用，LaTeX渲染跳过")
+                    self?.showDetailedLoadingState(step: .finalizing, progress: 0.7, detail: "LaTeX不可用，优化显示...")
+                case "math_failed":
+                    print("❌ LaTeX渲染启动失败")
+                    self?.showDetailedLoadingState(step: .finalizing, progress: 0.7, detail: "LaTeX渲染失败，优化显示...")
+                default:
+                    print("⚠️ LaTeX渲染返回未知结果: \(resultString)")
+                }
+            }
+            
+            // 延迟完成加载，确保所有处理都完成
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                self?.showDetailedLoadingState(step: .finalizing, progress: 0.9, detail: "最终优化中...")
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self?.showDetailedLoadingState(step: .finalizing, progress: 1.0, detail: "渲染完成！")
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self?.hideLoadingState()
+                    }
+                }
             }
         }
     }
@@ -875,23 +1896,7 @@ class MarkdownReaderViewController: UIViewController {
         }
     }
     
-    // MARK: - 状态管理
-    private func showLoadingState(message: String, progress: Double) {
-        loadingIndicator.startAnimating()
-        loadingLabel.text = message
-        loadingLabel.isHidden = false
-        progressView.isHidden = false
-        progressView.setProgress(Float(progress), animated: true)
-        
-        hideError()
-    }
-    
-    private func hideLoadingState() {
-        loadingIndicator.stopAnimating()
-        loadingLabel.isHidden = true
-        progressView.isHidden = true
-        progressView.setProgress(0, animated: false)
-    }
+    // MARK: - 状态管理（已迁移到详细加载状态系统）
     
     // MARK: - 错误处理
     private func showError(message: String) {
@@ -952,7 +1957,8 @@ class MarkdownReaderViewController: UIViewController {
             print("📄 保存当前Markdown内容，等待HTML模板重新加载")
         }
         
-        showLoadingState(message: "正在刷新...", progress: 0.0)
+        resetLoadingState()
+        showDetailedLoadingState(step: .initializing, progress: 0.0, detail: "正在重新初始化...")
         loadHTMLTemplate()
     }
     
@@ -1288,7 +2294,7 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
         print("✅ WebView导航完成")
         isHTMLTemplateLoaded = true
         isTemplateLoading = false
-        showLoadingState(message: "渲染器加载完成", progress: 0.5)
+        showDetailedLoadingState(step: .loadingTemplate, progress: 0.9, detail: "HTML模板和JavaScript引擎加载完成")
         
         // 确保完全隐藏WKBackdropView
         hideWKBackdropView(in: webView)
