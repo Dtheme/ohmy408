@@ -21,6 +21,12 @@ class MarkdownReaderViewController: UIViewController {
         }
     }
     
+    // MARK: - 通知观察者管理
+    private var notificationObservers: [NSObjectProtocol] = []
+    
+    // MARK: - 异步操作状态管理
+    private var isProcessingAsyncOperation: Bool = false
+    
     // MARK: - UI组件
     private lazy var webView: WKWebView = {
         let config = WKWebViewConfiguration()
@@ -519,15 +525,17 @@ class MarkdownReaderViewController: UIViewController {
         webView.clipsToBounds = false
         
         // 添加持续监听，防止动态添加的视图
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self, self.view.window != nil else { return }
             print("🔧 延迟清理WebView层次结构...")
-            cleanupWebViewLayers(in: webView)
+            cleanupWebViewLayers(in: self.webView)
         }
         
         // 再次延迟处理，确保完全清理
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self, self.view.window != nil else { return }
             print("🔧 最终清理WebView层次结构...")
-            cleanupWebViewLayers(in: webView)
+            cleanupWebViewLayers(in: self.webView)
         }
     }
     
@@ -542,8 +550,8 @@ class MarkdownReaderViewController: UIViewController {
         setupThemeManager()
         
         // 延迟加载HTML模板，确保UI完全设置完成
-        DispatchQueue.main.async {
-            self.loadHTMLTemplateIfNeeded()
+        DispatchQueue.main.async { [weak self] in
+            self?.loadHTMLTemplateIfNeeded()
         }
     }
     
@@ -556,21 +564,34 @@ class MarkdownReaderViewController: UIViewController {
             needsRefreshAfterPermission = false
             refreshWebView()
         }
+        // 视图出现时重新设置通知观察者
+        setupNotificationObservers()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
-        // 移除通知观察者
-        NotificationCenter.default.removeObserver(self, name: ThemeManager.themeDidChangeNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: Notification.Name("UpdateThemeButtonNotification"), object: nil)
+        // 视图消失时移除通知观察者，避免在后台时响应通知
+        removeNotificationObservers()
     }
+    
+
     
     deinit {
         networkMonitor?.cancel()
         
-        // 确保移除所有通知观察者
-        NotificationCenter.default.removeObserver(self)
+        // 清理WebView相关引用，防止内存泄漏
+        webView.navigationDelegate = nil
+        webView.stopLoading()
+        
+        // 清理ThemeManager中的WebView引用
+        // 注意：由于ThemeManager.setWebView不接受nil，我们不直接设置为nil
+        // WebView引用在ThemeManager中是weak引用，会自动置nil
+        
+        // 统一移除所有通知观察者
+        removeNotificationObservers()
+        
+        print("🗑️ MarkdownReaderViewController已释放")
     }
     
     // MARK: - UI设置
@@ -690,24 +711,45 @@ class MarkdownReaderViewController: UIViewController {
         // 设置WebView引用到主题管理器
         ThemeManager.shared.setWebView(webView)
         
-        // 监听主题变化
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(themeDidChange),
-            name: ThemeManager.themeDidChangeNotification,
-            object: nil
-        )
+        // 统一管理通知观察者，防止重复注册和内存泄漏
+        setupNotificationObservers()
+    }
+    
+    /// 统一设置所有通知观察者
+    private func setupNotificationObservers() {
+        // 清理之前的观察者（防止重复注册）
+        removeNotificationObservers()
+        
+        // 监听主题变化 - 使用闭包方式统一管理
+        let themeObserver = NotificationCenter.default.addObserver(
+            forName: ThemeManager.themeDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.themeDidChange()
+        }
+        notificationObservers.append(themeObserver)
         
         // 监听主题按钮更新通知
-        NotificationCenter.default.addObserver(
+        let buttonObserver = NotificationCenter.default.addObserver(
             forName: Notification.Name("UpdateThemeButtonNotification"),
             object: nil,
             queue: .main
         ) { [weak self] _ in
             self?.updateThemeButton()
         }
+        notificationObservers.append(buttonObserver)
         
-        print("🎨 主题管理器已设置")
+        print("📡 通知观察者已设置，共 \(notificationObservers.count) 个")
+    }
+    
+    /// 移除所有通知观察者
+    private func removeNotificationObservers() {
+        for observer in notificationObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        notificationObservers.removeAll()
+        print("🗑️ 所有通知观察者已移除")
     }
     
     private func updateTitle() {
@@ -718,7 +760,7 @@ class MarkdownReaderViewController: UIViewController {
         networkMonitor = NWPathMonitor()
         
         networkMonitor?.pathUpdateHandler = { [weak self] path in
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
                 let wasConnected = self?.hasNetworkPermission ?? false
                 self?.hasNetworkPermission = path.status == .satisfied
                 
@@ -777,7 +819,7 @@ class MarkdownReaderViewController: UIViewController {
                 let fileSize = content.count
                 let fileSizeText = self?.formatFileSize(fileSize) ?? "\(fileSize) 字符"
                 
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { [weak self] in
                     self?.markdownContent = content
                     self?.pendingMarkdownContent = content
                     print("📄 Markdown内容已读取，文件大小: \(fileSize) 字符")
@@ -790,7 +832,7 @@ class MarkdownReaderViewController: UIViewController {
                     }
                 }
             } catch {
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { [weak self] in
                     self?.showError(message: "无法读取文件内容: \(error.localizedDescription)")
                 }
             }
@@ -820,6 +862,14 @@ class MarkdownReaderViewController: UIViewController {
             pendingMarkdownContent = markdownContent
             return
         }
+        
+        // 防止并发渲染操作
+        guard !isProcessingAsyncOperation else {
+            print("⚠️ 已有异步操作在进行中，跳过渲染")
+            return
+        }
+        
+        isProcessingAsyncOperation = true
         
         print("🎨 开始渲染Markdown内容")
         hideError()
@@ -855,19 +905,19 @@ class MarkdownReaderViewController: UIViewController {
             // 根据文件大小智能调整分块策略
             let strategy = self.getIntelligentChunkStrategy(for: contentSize)
             
-            DispatchQueue.main.async {
-                self.showDetailedLoadingState(step: .chunking, progress: 0.1, detail: "使用\(strategy.name)策略进行智能分块...")
+            DispatchQueue.main.async { [weak self] in
+                self?.showDetailedLoadingState(step: .chunking, progress: 0.1, detail: "使用\(strategy.name)策略进行智能分块...")
             }
             
             // 使用智能分块算法，保持markdown结构完整
             let chunks = self.intelligentChunkContent(self.markdownContent, strategy: strategy)
             let totalChunks = chunks.count
             
-            DispatchQueue.main.async {
-                self.showDetailedLoadingState(step: .rendering, progress: 0.0, detail: "准备渲染\(totalChunks)个文档块...")
+            DispatchQueue.main.async { [weak self] in
+                self?.showDetailedLoadingState(step: .rendering, progress: 0.0, detail: "准备渲染\(totalChunks)个文档块...")
                 
                 // 初始化渲染环境
-                self.initializeChunkRendering(chunks: chunks, strategy: strategy, contentSize: contentSize)
+                self?.initializeChunkRendering(chunks: chunks, strategy: strategy, contentSize: contentSize)
             }
         }
     }
@@ -1660,13 +1710,15 @@ class MarkdownReaderViewController: UIViewController {
                 switch resultString {
                 case "chunk_rendered":
                     // 延迟一点再渲染下一块，避免GPU过载
-                    DispatchQueue.main.asyncAfter(deadline: .now() + strategy.delayInterval) {
-                        self?.renderIntelligentChunk(chunks: chunks, currentIndex: currentIndex + 1, strategy: strategy)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + strategy.delayInterval) { [weak self] in
+                        guard let self = self, self.isProcessingAsyncOperation else { return }
+                        self.renderIntelligentChunk(chunks: chunks, currentIndex: currentIndex + 1, strategy: strategy)
                     }
                 case "chunk_busy":
                     // 等待一下再重试
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        self?.renderIntelligentChunk(chunks: chunks, currentIndex: currentIndex, strategy: strategy)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                        guard let self = self, self.isProcessingAsyncOperation else { return }
+                        self.renderIntelligentChunk(chunks: chunks, currentIndex: currentIndex, strategy: strategy)
                     }
                 case "chunk_failed":
                     print("❌ 分块渲染失败，回退到完整渲染")
@@ -1818,14 +1870,18 @@ class MarkdownReaderViewController: UIViewController {
             }
             
             // 延迟完成加载，确保所有处理都完成
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                self?.showDetailedLoadingState(step: .finalizing, progress: 0.9, detail: "最终优化中...")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                guard let self = self, self.isProcessingAsyncOperation else { return }
+                self.showDetailedLoadingState(step: .finalizing, progress: 0.9, detail: "最终优化中...")
                 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    self?.showDetailedLoadingState(step: .finalizing, progress: 1.0, detail: "渲染完成！")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                    guard let self = self, self.isProcessingAsyncOperation else { return }
+                    self.showDetailedLoadingState(step: .finalizing, progress: 1.0, detail: "渲染完成！")
                     
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        self?.hideLoadingState()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                        guard let self = self, self.isProcessingAsyncOperation else { return }
+                        self.hideLoadingState()
+                        self.isProcessingAsyncOperation = false // 重置异步操作标志
                     }
                 }
             }
@@ -1885,8 +1941,10 @@ class MarkdownReaderViewController: UIViewController {
                 if resultString == "rendering_started" {
                     print("✅ 完整渲染已启动")
                     // 延迟隐藏加载状态，给渲染时间
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                        self?.hideLoadingState()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                        guard let self = self, self.isProcessingAsyncOperation else { return }
+                        self.hideLoadingState()
+                        self.isProcessingAsyncOperation = false // 重置异步操作标志
                     }
                 } else {
                     print("❌ 渲染启动失败")
@@ -1901,6 +1959,7 @@ class MarkdownReaderViewController: UIViewController {
     // MARK: - 错误处理
     private func showError(message: String) {
         hideLoadingState()
+        isProcessingAsyncOperation = false // 重置异步操作标志
         errorView.isHidden = false
         webView.isHidden = true
         
@@ -1963,11 +2022,8 @@ class MarkdownReaderViewController: UIViewController {
     }
     
     // MARK: - 主题管理事件
-    @objc private func themeDidChange(_ notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let theme = userInfo["theme"] as? UIUserInterfaceStyle else {
-            return
-        }
+    private func themeDidChange() {
+        let theme = ThemeManager.shared.getCurrentTheme()
         
         print("🎨 主题已变化为: \(theme == .dark ? "深色" : "浅色")")
         
@@ -2083,7 +2139,8 @@ class MarkdownReaderViewController: UIViewController {
                 print("❌ WebView初始主题同步失败: \(error)")
                 // 如果同步失败且未达到重试上限，短暂延迟后重试
                 if let self = self, self.themeInitRetryCount < self.maxThemeInitRetryCount {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                        guard let self = self, self.isHTMLTemplateLoaded else { return }
                         self.syncInitialThemeToWebView()
                     }
                 }
@@ -2094,7 +2151,8 @@ class MarkdownReaderViewController: UIViewController {
                 print("⚠️ WebView主题同步结果未知")
                 // 如果结果未知且未达到重试上限，短暂延迟后重试
                 if let self = self, self.themeInitRetryCount < self.maxThemeInitRetryCount {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                        guard let self = self, self.isHTMLTemplateLoaded else { return }
                         self.syncInitialThemeToWebView()
                     }
                 }
