@@ -30,6 +30,28 @@
 - 文本文件
 - PDF文档
 - XMind文件
+
+## 效果图展示
+请忽略我的slogan，为自己学习过程打打气。
+### 主界面和文件管理
+<div align="center">
+  <img src="ohmy408/ScreenShot/2501752500549_.pic.jpg" width="300" alt="主界面文件列表">
+  <img src="ohmy408/ScreenShot/2511752500551_.pic.jpg" width="300" alt="学科分类选择">
+</div>
+
+### Markdown阅读器
+<div align="center">
+  <img src="ohmy408/ScreenShot/2521752500551_.pic.jpg" width="300" alt="Markdown文档阅读">
+  <img src="ohmy408/ScreenShot/2531752500553_.pic.jpg" width="300" alt="LaTeX公式渲染">
+</div>
+
+### XMind查看器和功能界面
+<div align="center">
+  <img src="ohmy408/ScreenShot/2541752500555_.pic.jpg" width="300" alt="XMind思维导图查看">
+  <img src="ohmy408/ScreenShot/2551752500567_.pic.jpg" width="300" alt="文件搜索功能">
+</div>
+
+> 📱 **展示内容**：从左到右依次展示了主界面文件列表、学科分类选择、Markdown文档阅读、LaTeX公式渲染、XMind思维导图查看和文件搜索功能
  
 ## 技术实现
 

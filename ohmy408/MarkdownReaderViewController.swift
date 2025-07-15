@@ -48,6 +48,11 @@ class MarkdownReaderViewController: UIViewController {
         config.allowsAirPlayForMediaPlayback = false
         config.allowsPictureInPictureMediaPlayback = false
         
+        // 配置JavaScript消息处理器
+        let userContentController = WKUserContentController()
+        userContentController.add(self, name: "nativePrint")
+        config.userContentController = userContentController
+        
         // 配置网络相关设置
         if #available(iOS 14.0, *) {
             config.limitsNavigationsToAppBoundDomains = false
@@ -584,6 +589,9 @@ class MarkdownReaderViewController: UIViewController {
         webView.navigationDelegate = nil
         webView.stopLoading()
         
+        // 清理JavaScript消息处理器
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "nativePrint")
+        
         // 清理ThemeManager中的WebView引用
         // 注意：由于ThemeManager.setWebView不接受nil，我们不直接设置为nil
         // WebView引用在ThemeManager中是weak引用，会自动置nil
@@ -875,14 +883,71 @@ class MarkdownReaderViewController: UIViewController {
         hideError()
         showDetailedLoadingState(step: .analyzing, progress: 0.1, detail: "分析文档结构...")
         retryCount = 0 // 重置重试计数
-        renderOptimizedMarkdown()
+        
+        // 直接调用renderMarkdown函数
+        renderMarkdownDirectly()
     }
     
-    private func renderOptimizedMarkdown() {
-        print("🎨 开始统一分块渲染")
+    private func renderMarkdownDirectly() {
+        print("🎨 开始直接渲染Markdown")
         
-        // 所有文件都使用分块渲染，根据文件大小调整分块策略
-        renderMarkdownInChunks()
+        let contentSize = markdownContent.count
+        let fileSizeText = formatFileSize(contentSize)
+        
+        showDetailedLoadingState(step: .rendering, progress: 0.2, detail: "渲染\(fileSizeText)的文档...")
+        
+        // 转义JavaScript字符串
+        let escapedContent = escapeForJavaScript(markdownContent)
+        
+        let renderScript = """
+            try {
+                console.log('🔧 准备调用renderMarkdown函数');
+                if (typeof window.renderMarkdown === 'function') {
+                    window.renderMarkdown('\(escapedContent)');
+                    console.log('✅ renderMarkdown调用成功');
+                    'render_success';
+                } else {
+                    console.error('❌ renderMarkdown函数不存在');
+                    'render_function_missing';
+                }
+            } catch(e) {
+                console.error('❌ renderMarkdown调用失败:', e);
+                'render_failed';
+            }
+        """
+        
+        webView.evaluateJavaScript(renderScript) { [weak self] (result, error) in
+            if let error = error {
+                print("❌ renderMarkdown调用失败: \(error)")
+                self?.showError(message: "渲染失败: \(error.localizedDescription)")
+                return
+            }
+            
+            if let resultString = result as? String {
+                switch resultString {
+                case "render_success":
+                    print("✅ renderMarkdown调用成功")
+                    // 延迟隐藏加载状态，给渲染时间
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                        guard let self = self, self.isProcessingAsyncOperation else { return }
+                        self.hideLoadingState()
+                        self.isProcessingAsyncOperation = false
+                    }
+                case "render_function_missing":
+                    print("❌ renderMarkdown函数不存在")
+                    self?.showError(message: "渲染函数不存在，请检查HTML模板")
+                case "render_failed":
+                    print("❌ renderMarkdown调用失败")
+                    self?.showError(message: "渲染调用失败")
+                default:
+                    print("⚠️ 未知的渲染结果: \(resultString)")
+                    self?.showError(message: "渲染过程异常")
+                }
+            } else {
+                print("⚠️ 渲染结果为空或类型错误")
+                self?.showError(message: "渲染结果异常")
+            }
+        }
     }
     
     private func renderMarkdownInChunks() {
@@ -1662,71 +1727,51 @@ class MarkdownReaderViewController: UIViewController {
         
         let renderScript = """
             try {
-                if (!window.chunkRenderState || window.chunkRenderState.isRendering) {
-                    console.log('⏳ 等待上一块渲染完成...');
-                    'chunk_busy';
+                console.log('🔧 准备调用renderMarkdown函数');
+                if (typeof window.renderMarkdown === 'function') {
+                    window.renderMarkdown('\(escapedContent)');
+                    console.log('✅ renderMarkdown调用成功');
+                    'render_success';
                 } else {
-                    window.chunkRenderState.isRendering = true;
-                    
-                    // 渲染当前块
-                    var chunkHtml = marked.parse('\(escapedContent)');
-                    
-                    // 创建块容器
-                    var chunkDiv = document.createElement('div');
-                    chunkDiv.className = 'markdown-chunk';
-                    chunkDiv.setAttribute('data-chunk', '\(chunkNumber)');
-                    chunkDiv.style.cssText = 'margin-bottom: 10px; opacity: 0; transition: opacity 0.3s ease;';
-                    chunkDiv.innerHTML = chunkHtml;
-                    
-                    // 添加到容器
-                    window.chunkRenderState.container.appendChild(chunkDiv);
-                    
-                    // 淡入效果
-                    setTimeout(function() {
-                        chunkDiv.style.opacity = '1';
-                    }, 50);
-                    
-                    window.chunkRenderState.renderedChunks++;
-                    window.chunkRenderState.isRendering = false;
-                    
-                    console.log('✅ 第\(chunkNumber)块渲染完成');
-                    'chunk_rendered';
+                    console.error('❌ renderMarkdown函数不存在');
+                    'render_function_missing';
                 }
             } catch(e) {
-                console.error('❌ 分块渲染失败:', e);
-                window.chunkRenderState.isRendering = false;
-                'chunk_failed';
+                console.error('❌ renderMarkdown调用失败:', e);
+                'render_failed';
             }
         """
         
         webView.evaluateJavaScript(renderScript) { [weak self] (result, error) in
             if let error = error {
-                print("❌ 第\(chunkNumber)块渲染失败: \(error)")
-                self?.performCompleteMarkdownRender()
+                print("❌ renderMarkdown调用失败: \(error)")
+                self?.showError(message: "渲染失败: \(error.localizedDescription)")
                 return
             }
             
             if let resultString = result as? String {
                 switch resultString {
-                case "chunk_rendered":
-                    // 延迟一点再渲染下一块，避免GPU过载
-                    DispatchQueue.main.asyncAfter(deadline: .now() + strategy.delayInterval) { [weak self] in
+                case "render_success":
+                    print("✅ renderMarkdown调用成功")
+                    // 延迟隐藏加载状态，给渲染时间
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                         guard let self = self, self.isProcessingAsyncOperation else { return }
-                        self.renderIntelligentChunk(chunks: chunks, currentIndex: currentIndex + 1, strategy: strategy)
+                        self.hideLoadingState()
+                        self.isProcessingAsyncOperation = false
                     }
-                case "chunk_busy":
-                    // 等待一下再重试
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                        guard let self = self, self.isProcessingAsyncOperation else { return }
-                        self.renderIntelligentChunk(chunks: chunks, currentIndex: currentIndex, strategy: strategy)
-                    }
-                case "chunk_failed":
-                    print("❌ 分块渲染失败，回退到完整渲染")
-                    self?.performCompleteMarkdownRender()
+                case "render_function_missing":
+                    print("❌ renderMarkdown函数不存在")
+                    self?.showError(message: "渲染函数不存在，请检查HTML模板")
+                case "render_failed":
+                    print("❌ renderMarkdown调用失败")
+                    self?.showError(message: "渲染调用失败")
                 default:
                     print("⚠️ 未知的渲染结果: \(resultString)")
-                    self?.performCompleteMarkdownRender()
+                    self?.showError(message: "渲染过程异常")
                 }
+            } else {
+                print("⚠️ 渲染结果为空或类型错误")
+                self?.showError(message: "渲染结果异常")
             }
         }
     }
@@ -2432,6 +2477,33 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
             showError(message: "首次加载需要网络权限，授权后将自动刷新")
         } else {
             showError(message: "网页加载失败: \(error.localizedDescription)")
+        }
+    }
+}
+
+// MARK: - WKScriptMessageHandler
+extension MarkdownReaderViewController: WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        // 处理来自JavaScript的原生print消息
+        if message.name == "nativePrint" {
+            let logMessage: String
+            
+            if let messageBody = message.body as? String {
+                logMessage = messageBody
+            } else if let messageDict = message.body as? [String: Any] {
+                // 如果是对象，转换为JSON字符串
+                do {
+                    let jsonData = try JSONSerialization.data(withJSONObject: messageDict, options: [.prettyPrinted])
+                    logMessage = String(data: jsonData, encoding: .utf8) ?? "无法解析的对象"
+                } catch {
+                    logMessage = "JSON解析失败: \(error.localizedDescription)"
+                }
+            } else {
+                logMessage = "JS消息: \(message.body)"
+            }
+            
+            // 使用原生Swift print函数输出到Xcode控制台
+            print("📱 [JavaScript] \(logMessage)")
         }
     }
 }

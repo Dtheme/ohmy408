@@ -15,7 +15,24 @@
                             processEscapes: true,                        // 支持反斜杠转义
                             processEnvironments: true,                   // 支持环境
                             packages: {
-                                '[+]': ['base', 'ams', 'amssymb', 'boldsymbol', 'physics', 'mhchem', 'newcommand', 'configmacros']
+                                '[+]': ['base', 'ams', 'amssymb', 'boldsymbol', 'physics', 'mhchem', 'newcommand', 'configmacros', 'color', 'textmacros']
+                            },
+                            macros: {
+                                // 中文数制表示宏定义
+                                '原': '\\text{原}',
+                                '反': '\\text{反}',
+                                '补': '\\text{补}',
+                                '码': '\\text{码}',
+                                // 英文数制表示宏定义
+                                'orig': '\\text{orig}',
+                                'inv': '\\text{inv}',
+                                'comp': '\\text{comp}',
+                                'code': '\\text{code}',
+                                // 其他常用宏
+                                'binary': '\\text{binary}',
+                                'decimal': '\\text{decimal}',
+                                'hex': '\\text{hex}',
+                                'octal': '\\text{octal}'
                             },
                             tags: 'ams',                                 // 公式编号
                             tagSide: 'right',                           // 编号位置
@@ -26,13 +43,14 @@
                             minScale: 0.5,                              // 最小缩放
                             matchFontHeight: false,                     // 匹配字体高度
                             displayAlign: 'center',                     // 居中对齐
-                            displayIndent: '0em'                        // 显示缩进
+                            displayIndent: '0em',                       // 显示缩进
+                            fontURL: 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2'  // 字体支持
                         },
                         startup: {
                             typeset: false                              // 禁止自动初始化，手动控制渲染
                         },
                         loader: {
-                            load: ['[tex]/mhchem', '[tex]/physics', '[tex]/configmacros']
+                            load: ['[tex]/mhchem', '[tex]/physics', '[tex]/configmacros', '[tex]/color', '[tex]/textmacros']
                         }
                     };
                 </script>
@@ -568,6 +586,11 @@
                     }
                     
                     /* 目录链接深度优化 */
+                    .toc-link {
+                        color: #1a1a1a !important;
+                        transition: all 0.2s ease !important;
+                    }
+                    
                     .toc-link:hover {
                         background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%) !important;
                         color: #0969da !important;
@@ -1873,11 +1896,72 @@
                 constructor() {
                     this.isNativeEnvironment = this.detectNativeEnvironment();
                     this.setupMessageHandlers();
+                    this.setupNativePrint();
                 }
                 
                 detectNativeEnvironment() {
                     // 检测是否在原生WebView环境中
                     return window.webkit && window.webkit.messageHandlers;
+                }
+                
+                setupNativePrint() {
+                    // 设置原生打印函数
+                    if (this.isNativeEnvironment && window.webkit.messageHandlers.nativePrint) {
+                        window.nativePrint = function(message) {
+                            try {
+                                // 如果消息是对象，将其转换为字符串
+                                let logMessage = message;
+                                if (typeof message === 'object' && message !== null) {
+                                    logMessage = JSON.stringify(message, null, 2);
+                                } else if (typeof message === 'undefined') {
+                                    logMessage = 'undefined';
+                                } else if (message === null) {
+                                    logMessage = 'null';
+                                } else {
+                                    logMessage = String(message);
+                                }
+                                
+                                // 发送到原生代码
+                                window.webkit.messageHandlers.nativePrint.postMessage(logMessage);
+                            } catch (error) {
+                                console.error('原生打印失败:', error);
+                            }
+                        };
+                        
+                        // 也可以直接覆盖console.log（可选）
+                        const originalConsoleLog = console.log;
+                        console.log = function(...args) {
+                            // 保持原有的console.log功能
+                            originalConsoleLog.apply(console, args);
+                            
+                            // 同时发送到原生代码
+                            const message = args.map(arg => {
+                                if (typeof arg === 'object' && arg !== null) {
+                                    return JSON.stringify(arg, null, 2);
+                                }
+                                return String(arg);
+                            }).join(' ');
+                            
+                            window.nativePrint(message);
+                        };
+                        
+                        console.log('✅ 原生打印功能已启用');
+                        
+                        // 测试原生打印功能
+                        setTimeout(() => {
+                            window.nativePrint('🔧 原生打印功能测试 - 这条消息应该出现在Xcode控制台');
+                            window.nativePrint({
+                                test: '对象测试',
+                                timestamp: new Date().toISOString(),
+                                type: 'native_print_test'
+                            });
+                        }, 1000);
+                    } else {
+                        // 如果不在原生环境中，nativePrint回退到console.log
+                        window.nativePrint = function(message) {
+                            console.log(message);
+                        };
+                    }
                 }
                 
                 setupMessageHandlers() {
@@ -2147,7 +2231,9 @@
                 const tocList = document.getElementById('toc-list');
                 
                 if (headers.length === 0) {
-                    tocList.innerHTML = '<li style="color: #666; padding: 12px; text-align: center;">无标题</li>';
+                    const isDarkMode = document.body.classList.contains('dark-mode');
+                    const noTitleColor = isDarkMode ? '#666' : '#1a1a1a';
+                    tocList.innerHTML = `<li style="color: ${noTitleColor}; padding: 12px; text-align: center;">无标题</li>`;
                     return;
                 }
                 
@@ -2211,7 +2297,7 @@
                     
                     // 根据主题设置样式
                     const isDarkMode = document.body.classList.contains('dark-mode');
-                    const textColor = isDarkMode ? '#c9d1d9' : '#24292f';
+                    const textColor = isDarkMode ? '#c9d1d9' : '#1a1a1a';
                     
                     link.style.cssText = `
                         display: block;
@@ -3023,16 +3109,26 @@ gantt
                         window.startRenderingTimer();
                     }
                     
-                    // 直接渲染完整的Markdown内容
-                    text = markdownText;
+                    nativePrint('🚀 renderMarkdown函数开始执行');
+                    nativePrint(`📝 输入内容长度: ${markdownText.length}`);
                     
-                    // 预处理markdown文本，确保HTML被正确识别
-                    let processedText = text;
-                    
-                    // 确保text是字符串类型
-                    if (typeof text !== 'string') {
-                        console.error('❌ 输入的markdown文本不是字符串类型:', typeof text);
+                    // 确保输入是字符串类型
+                    if (typeof markdownText !== 'string') {
+                        console.error('❌ 输入的markdown文本不是字符串类型:', typeof markdownText);
                         return;
+                    }
+                    
+                    // 首先执行LaTeX预处理
+                    nativePrint('🔧 开始执行LaTeX预处理');
+                    let processedText = markdownText;
+                    
+                    // 检查预处理函数是否存在
+                    if (typeof window.preprocessLatexInMarkdown === 'function') {
+                        nativePrint('✅ 找到预处理函数，开始处理');
+                        processedText = window.preprocessLatexInMarkdown(markdownText);
+                        nativePrint(`🔧 预处理完成，原始长度: ${markdownText.length}, 处理后长度: ${processedText.length}`);
+                    } else {
+                        nativePrint('❌ 预处理函数不存在！');
                     }
                     
                     // 检测iOS WebView环境
@@ -3043,41 +3139,473 @@ gantt
                         // 简化处理，专注于核心渲染功能
                     }
                     
-                                         // 所有内容都使用优化的分块渲染
-                     console.log('📄 统一使用分块渲染，内容大小:', processedText.length);
-                     renderOptimizedContent(processedText);
+                    // 根据内容大小选择渲染策略
+                    const contentSize = processedText.length;
+                    console.log('📄 内容大小:', contentSize, '字符');
+                    
+                    if (contentSize > 50000) {
+                        // 大文件使用分块渲染
+                        console.log('📄 大文件使用分块渲染');
+                        renderOptimizedContent(processedText);
+                    } else {
+                        // 小文件直接渲染
+                        console.log('📄 小文件直接渲染');
+                        renderDirectly(processedText);
+                    }
                     
                     // iOS WebView基本处理
                     if (isIOSWebView) {
                         console.log('🍎 iOS WebView环境已优化');
                     }
                     
-                    // 使用requestAnimationFrame确保DOM更新后再处理增强功能
-                    requestAnimationFrame(() => {
-                        try {
-                            console.log('🚀 开始处理Markdown增强功能');
-                            
-                            // 使用优化的增强功能处理
-                            processEnhancements(contentElement);
-                            
-                            // 结束性能监控
-                            if (window.endRenderingTimer) {
-                                window.endRenderingTimer('标准渲染');
-                            }
-                            
-                        } catch (error) {
-                            console.error('❌ 增强功能处理错误:', error);
-                        }
-                        });
-                        
                 } catch (error) {
                     console.error('Markdown渲染错误:', error);
                     const contentElement = document.getElementById('rendered-content');
                     if (contentElement) {
                         contentElement.innerHTML = 
                         '<div style="color: red; padding: 20px;">渲染错误: ' + error.message + '</div>';
+                    }
                 }
+            }
+            
+            // 新增：直接渲染函数（用于小文件）
+            function renderDirectly(processedText) {
+                const contentElement = document.getElementById('rendered-content');
+                if (!contentElement) {
+                    console.error('未找到内容容器元素');
+                    return;
                 }
+                
+                // 清空容器
+                contentElement.innerHTML = '';
+                
+                try {
+                    // 直接使用marked解析
+                    const html = marked.parse(processedText);
+                    contentElement.innerHTML = html;
+                    
+                    // 处理增强功能
+                    processEnhancements(contentElement);
+                    
+                    // 结束性能监控
+                    if (window.endRenderingTimer) {
+                        window.endRenderingTimer('直接渲染');
+                    }
+                    
+                    console.log('✅ 直接渲染完成');
+                } catch (error) {
+                    console.error('❌ 直接渲染失败:', error);
+                    contentElement.innerHTML = '<div style="color: red; padding: 20px;">渲染失败: ' + error.message + '</div>';
+                }
+            }
+            
+            // 在markdown解析之前预处理LaTeX公式（简化版本）- 移到全局作用域
+            window.preprocessLatexInMarkdown = function(markdownText) {
+                nativePrint('🔧 开始预处理markdown中的LaTeX公式');
+                nativePrint(`📝 原始文本长度: ${markdownText.length}`);
+                nativePrint(`📝 包含$符号数量: ${(markdownText.match(/\$/g) || []).length}`);
+                nativePrint(`📝 函数作用域测试: ${typeof window !== 'undefined' ? 'window可用' : 'window不可用'}`);
+                
+                let processedText = markdownText;
+                
+                // 简化的LaTeX公式处理函数
+                function processLatexFormula(formula) {
+                    nativePrint(`🔍 开始处理公式: "${formula}"`);
+                    nativePrint(`📊 公式长度: ${formula.length}, 包含中文: ${/[原反补码]/.test(formula)}`);
+                    let processed = formula;
+                    
+                    // 1. 处理\mathrm{中文}转换为\text{中文}
+                    const mathrm_matches = processed.match(/\\mathrm\{([^}]*[原反补码][^}]*)\}/g);
+                    if (mathrm_matches) {
+                        nativePrint(`  找到\\mathrm匹配:`, mathrm_matches);
+                        processed = processed.replace(/\\mathrm\{([^}]*[原反补码][^}]*)\}/g, (match, content) => {
+                            nativePrint(`  转换 \\mathrm{${content}} -> \\text{${content}}`);
+                            return `\\text{${content}}`;
+                        });
+                    }
+                    
+                    // 2. 处理裸中文下标：_{中文}
+                    const chinese_bracket_matches = processed.match(/_{([^}]*[原反补码][^}]*)}/g);
+                    if (chinese_bracket_matches) {
+                        nativePrint(`  找到中文下标匹配:`, chinese_bracket_matches);
+                        processed = processed.replace(/_{([^}]*[原反补码][^}]*)}/g, (match, content) => {
+                            if (content.includes('\\text{') || content.includes('\\mathrm{')) {
+                                nativePrint(`  跳过已处理的: ${match}`);
+                                return match;
+                            }
+                            const wrapped = content.replace(/([原反补码])/g, '\\text{$1}');
+                            nativePrint(`  处理中文下标: ${content} -> ${wrapped}`);
+                            return `_{${wrapped}}`;
+                        });
+                    }
+                    
+                    // 3. 处理简单中文下标：_中文
+                    const simple_chinese_matches = processed.match(/_([原反补码])/g);
+                    if (simple_chinese_matches) {
+                        nativePrint(`  找到简单中文下标匹配:`, simple_chinese_matches);
+                        processed = processed.replace(/_([原反补码])/g, (match, char) => {
+                            nativePrint(`  处理简单中文下标: ${char} -> \\text{${char}}`);
+                            return `_{\\text{${char}}}`;
+                        });
+                    }
+                    
+                    // 4. 处理英文下标宏
+                    const macros = ['orig', 'inv', 'comp', 'code', 'binary', 'decimal', 'hex', 'octal'];
+                    macros.forEach(macro => {
+                        // 处理_{macro}格式
+                        const bracketPattern = new RegExp(`_{(${macro})}`, 'g');
+                        const bracketMatches = processed.match(bracketPattern);
+                        if (bracketMatches) {
+                            nativePrint(`  找到英文下标宏: _{${macro}}`, bracketMatches);
+                            processed = processed.replace(bracketPattern, `_{\\${macro}}`);
+                        }
+                        
+                        // 处理_macro格式（单词边界）
+                        const simplePattern = new RegExp(`_${macro}\\b`, 'g');
+                        const simpleMatches = processed.match(simplePattern);
+                        if (simpleMatches) {
+                            nativePrint(`  找到简单英文下标宏: _${macro}`, simpleMatches);
+                            processed = processed.replace(simplePattern, `_{\\${macro}}`);
+                        }
+                    });
+                    
+                    if (processed !== formula) {
+                        nativePrint(`  🎯 公式处理结果: "${formula}" -> "${processed}"`);
+                    } else {
+                        nativePrint(`  ⚪ 公式无需修改: "${formula}"`);
+                    }
+                    
+                    return processed;
+                }
+                
+                // 处理所有LaTeX公式 - 使用改进的匹配方式
+                let modified = false;
+                
+                // 处理行内公式：$...$
+                nativePrint('🔍 开始处理行内公式');
+                nativePrint(`📝 原始文本: ${processedText}`);
+                
+                // 改进的LaTeX公式匹配：处理逗号分隔的多个公式
+                function processInlineLatex(text) {
+                    let result = text;
+                    let processedCount = 0;
+                    
+                    // 使用更精确的匹配：贪婪匹配最短的$...$
+                    const matches = [];
+                    let index = 0;
+                    
+                    while (index < result.length) {
+                        const startIndex = result.indexOf('$', index);
+                        if (startIndex === -1) break;
+                        
+                        const endIndex = result.indexOf('$', startIndex + 1);
+                        if (endIndex === -1) break;
+                        
+                        const formula = result.substring(startIndex + 1, endIndex);
+                        
+                        // 确保这不是$$...$$格式的一部分
+                        if (startIndex > 0 && result[startIndex - 1] === '$') {
+                            nativePrint(`  跳过双$格式开始: ${formula}`);
+                            index = startIndex + 1;
+                            continue;
+                        }
+                        if (endIndex < result.length - 1 && result[endIndex + 1] === '$') {
+                            nativePrint(`  跳过双$格式结束: ${formula}`);
+                            index = endIndex + 1;
+                            continue;
+                        }
+                        
+                        matches.push({
+                            full: result.substring(startIndex, endIndex + 1),
+                            formula: formula,
+                            start: startIndex,
+                            end: endIndex + 1
+                        });
+                        
+                        index = endIndex + 1;
+                    }
+                    
+                    nativePrint(`🔍 找到 ${matches.length} 个行内公式:`, matches);
+                    
+                    // 从后向前处理，避免索引偏移
+                    for (let i = matches.length - 1; i >= 0; i--) {
+                        const match = matches[i];
+                        nativePrint(`🔧 处理公式 ${i + 1}: "${match.formula}"`);
+                        
+                        const processed = processLatexFormula(match.formula);
+                        if (processed !== match.formula) {
+                            modified = true;
+                            nativePrint(`  ✅ 公式已修改: "${match.formula}" -> "${processed}"`);
+                        } else {
+                            nativePrint(`  ⚪ 公式无需修改: "${match.formula}"`);
+                        }
+                        
+                        const newFormula = `$${processed}$`;
+                        result = result.substring(0, match.start) + newFormula + result.substring(match.end);
+                        processedCount++;
+                    }
+                    
+                    nativePrint(`✅ 处理完成，共处理 ${processedCount} 个公式`);
+                    return result;
+                }
+                
+                processedText = processInlineLatex(processedText);
+                nativePrint(`📝 处理后的文本: ${processedText}`);
+                
+                // 处理块级公式：$$...$$
+                processedText = processedText.replace(/\$\$([^$]+)\$\$/g, (match, formula) => {
+                    const processed = processLatexFormula(formula);
+                    if (processed !== formula) {
+                        modified = true;
+                    }
+                    return `$$${processed}$$`;
+                });
+                
+                // 处理\(...\)格式
+                processedText = processedText.replace(/\\\(([^)]+)\\\)/g, (match, formula) => {
+                    const processed = processLatexFormula(formula);
+                    if (processed !== formula) {
+                        modified = true;
+                    }
+                    return `\\(${processed}\\)`;
+                });
+                
+                // 处理\[...\]格式
+                processedText = processedText.replace(/\\\[([^\]]+)\\\]/g, (match, formula) => {
+                    const processed = processLatexFormula(formula);
+                    if (processed !== formula) {
+                        modified = true;
+                    }
+                    return `\\[${processed}\\]`;
+                });
+                
+                if (modified) {
+                    nativePrint('✅ LaTeX预处理完成，有修改');
+                } else {
+                    nativePrint('⚪ LaTeX预处理完成，无修改');
+                }
+                
+                nativePrint(`📤 返回处理后的文本: ${processedText}`);
+                return processedText;
+            };
+            
+            // 预处理LaTeX公式中的中文下标（修复多个表达式识别问题）
+            function preprocessChineseSubscripts(container) {
+                console.log('🔧 开始预处理LaTeX公式中的中文下标');
+                
+                // 改进的预处理函数，修复多个LaTeX表达式识别问题
+                function processSubscriptsInText(text) {
+                    let content = text;
+                    let modified = false;
+                    
+                    // 通用的LaTeX公式处理函数（不仅处理中文，确保所有公式都能正确渲染）
+                    function processSubscriptsInFormula(formula) {
+                        let processedFormula = formula;
+                        console.log(`🔍 处理公式: ${formula}`);
+                        
+                        // 1. 处理\mathrm{中文}转换为\text{中文}
+                        if (processedFormula.includes('\\mathrm{')) {
+                            const originalFormula = processedFormula;
+                            processedFormula = processedFormula.replace(/\\mathrm\{([^}]*[原反补码][^}]*)\}/g, (match, subscript) => {
+                                console.log(`📝 转换\\mathrm{}为\\text{}: ${match} -> \\text{${subscript}}`);
+                                return `\\text{${subscript}}`;
+                            });
+                            if (processedFormula !== originalFormula) {
+                                console.log(`  ✅ \\mathrm{}转换完成`);
+                            }
+                        }
+                        
+                        // 2. 处理裸中文下标（没有\text{}包装的）
+                        const originalFormulaBeforeChineseProcessing = processedFormula;
+                        
+                        // 处理带大括号的中文下标：_{中文字符}
+                        processedFormula = processedFormula.replace(/_{([^}]*[原反补码][^}]*)}/g, (match, subscript) => {
+                            // 如果已经包含\text{}或\mathrm{}，不重复处理
+                            if (subscript.includes('\\text{') || subscript.includes('\\mathrm{')) {
+                                return match;
+                            }
+                            
+                            const wrappedSubscript = subscript.replace(/([原反补码])/g, '\\text{$1}');
+                            console.log(`📝 处理中文下标: ${subscript} -> ${wrappedSubscript}`);
+                            return `_{${wrappedSubscript}}`;
+                        });
+                        
+                        // 处理简单的中文下标：_中文（没有大括号）
+                        processedFormula = processedFormula.replace(/_([原反补码])/g, (match, subscript) => {
+                            console.log(`📝 处理简单中文下标: ${subscript} -> \\text{${subscript}}`);
+                            return `_{\\text{${subscript}}}`;
+                        });
+                        
+                        if (processedFormula !== originalFormulaBeforeChineseProcessing) {
+                            console.log(`  ✅ 中文下标处理完成`);
+                        }
+                        
+                        // 3. 处理英文下标宏（确保宏能正确识别）
+                        const originalFormulaBeforeEnglishProcessing = processedFormula;
+                        const englishMacros = ['orig', 'inv', 'comp', 'code', 'binary', 'decimal', 'hex', 'octal'];
+                        
+                        englishMacros.forEach(macro => {
+                            // 处理有大括号的英文下标：_{macro}
+                            const bracketPattern = new RegExp(`_{(${macro})}`, 'g');
+                            processedFormula = processedFormula.replace(bracketPattern, (match, subscript) => {
+                                console.log(`📝 处理英文下标宏: ${subscript} -> \\${subscript}`);
+                                return `_{\\${subscript}}`;
+                            });
+                            
+                            // 处理没有大括号的英文下标：_macro
+                            const simplePattern = new RegExp(`_${macro}\\b`, 'g');
+                            processedFormula = processedFormula.replace(simplePattern, (match) => {
+                                console.log(`📝 处理简单英文下标宏: ${macro} -> \\${macro}`);
+                                return `_{\\${macro}}`;
+                            });
+                        });
+                        
+                        if (processedFormula !== originalFormulaBeforeEnglishProcessing) {
+                            console.log(`  ✅ 英文下标宏处理完成`);
+                        }
+                        
+                        // 4. 验证LaTeX语法（确保所有公式都是有效的）
+                        const openBraces = (processedFormula.match(/\{/g) || []).length;
+                        const closeBraces = (processedFormula.match(/\}/g) || []).length;
+                        if (openBraces !== closeBraces) {
+                            console.warn(`⚠️  括号不匹配，使用原始公式: ${formula}`);
+                            return formula;
+                        }
+                        
+                        // 5. 最终结果
+                        if (processedFormula !== formula) {
+                            console.log(`  ✅ 公式处理完成: ${formula} -> ${processedFormula}`);
+                        } else {
+                            console.log(`  ✅ 公式验证通过，无需修改: ${formula}`);
+                        }
+                        
+                        return processedFormula;
+                    }
+                    
+                    // 处理行内公式：$...$（改进版本，避免重复替换）
+                    let processedContent = content;
+                    const inlineMatches = [...content.matchAll(/\$([^$]+)\$/g)];
+                    if (inlineMatches.length > 0) {
+                        console.log(`🔍 发现 ${inlineMatches.length} 个行内公式`);
+                        
+                        // 从后往前处理，避免索引偏移问题
+                        for (let i = inlineMatches.length - 1; i >= 0; i--) {
+                            const match = inlineMatches[i];
+                            const fullMatch = match[0];
+                            const formula = match[1];
+                            const startIndex = match.index;
+                            
+                            console.log(`🔧 处理行内公式 ${i + 1}: ${formula}`);
+                            const processedFormula = processSubscriptsInFormula(formula);
+                            
+                            if (processedFormula !== formula) {
+                                modified = true;
+                                console.log(`  ✅ 已处理: ${formula} -> ${processedFormula}`);
+                            }
+                            
+                            // 精确替换，避免重复替换问题
+                            processedContent = processedContent.slice(0, startIndex) + 
+                                              `$${processedFormula}$` + 
+                                              processedContent.slice(startIndex + fullMatch.length);
+                        }
+                    }
+                    content = processedContent;
+                    
+                    // 处理块级公式：$$...$$（改进版本，避免重复替换）
+                    processedContent = content;
+                    const displayMatches = [...content.matchAll(/\$\$([^$]+)\$\$/g)];
+                    if (displayMatches.length > 0) {
+                        console.log(`🔍 发现 ${displayMatches.length} 个块级公式`);
+                        
+                        // 从后往前处理，避免索引偏移问题
+                        for (let i = displayMatches.length - 1; i >= 0; i--) {
+                            const match = displayMatches[i];
+                            const fullMatch = match[0];
+                            const formula = match[1];
+                            const startIndex = match.index;
+                            
+                            console.log(`🔧 处理块级公式 ${i + 1}: ${formula}`);
+                            const processedFormula = processSubscriptsInFormula(formula);
+                            
+                            if (processedFormula !== formula) {
+                                modified = true;
+                                console.log(`  ✅ 已处理: ${formula} -> ${processedFormula}`);
+                            }
+                            
+                            // 精确替换，避免重复替换问题
+                            processedContent = processedContent.slice(0, startIndex) + 
+                                              `$$${processedFormula}$$` + 
+                                              processedContent.slice(startIndex + fullMatch.length);
+                        }
+                    }
+                    content = processedContent;
+                    
+                    // 处理行内公式的另一种形式：\(...\)
+                    const parenMatches = content.match(/\\\([^)]+\\\)/g);
+                    if (parenMatches) {
+                        console.log(`🔍 发现 ${parenMatches.length} 个\\(\\)行内公式:`, parenMatches);
+                        
+                        parenMatches.forEach((match, index) => {
+                            const formula = match.slice(2, -2); // 去掉\(和\)符号
+                            const processedFormula = processSubscriptsInFormula(formula);
+                            if (processedFormula !== formula) {
+                                modified = true;
+                                console.log(`🔧 处理\\(\\)行内公式 ${index + 1}: ${formula} -> ${processedFormula}`);
+                                content = content.replace(match, `\\(${processedFormula}\\)`);
+                            }
+                        });
+                    }
+                    
+                    // 处理块级公式的另一种形式：\[...\]
+                    const bracketMatches = content.match(/\\\[[^\]]+\\\]/g);
+                    if (bracketMatches) {
+                        console.log(`🔍 发现 ${bracketMatches.length} 个\\[\\]块级公式:`, bracketMatches);
+                        
+                        bracketMatches.forEach((match, index) => {
+                            const formula = match.slice(2, -2); // 去掉\[和\]符号
+                            const processedFormula = processSubscriptsInFormula(formula);
+                            if (processedFormula !== formula) {
+                                modified = true;
+                                console.log(`🔧 处理\\[\\]块级公式 ${index + 1}: ${formula} -> ${processedFormula}`);
+                                content = content.replace(match, `\\[${processedFormula}\\]`);
+                            }
+                        });
+                    }
+                    
+                    return { content, modified };
+                }
+                
+                // 处理容器内的所有文本节点（包括列表项）
+                const walker = document.createTreeWalker(
+                    container,
+                    NodeFilter.SHOW_TEXT,
+                    null,
+                    false
+                );
+                
+                const textNodes = [];
+                let node;
+                while (node = walker.nextNode()) {
+                    // 扩展检查条件，确保能够找到所有包含数学公式的节点
+                    if (node.textContent.includes('$') || 
+                        node.textContent.includes('\\') || 
+                        node.textContent.includes('mathrm') ||
+                        /[原反补码]/.test(node.textContent)) {
+                        textNodes.push(node);
+                        console.log(`🔍 发现包含数学公式的文本节点: "${node.textContent.substring(0, 50)}..."`);
+                    }
+                }
+                
+                // 处理所有包含数学公式的文本节点
+                textNodes.forEach(textNode => {
+                    const result = processSubscriptsInText(textNode.textContent);
+                    if (result.modified) {
+                        textNode.textContent = result.content;
+                        console.log('✅ 已更新文本节点内容');
+                    }
+                });
+                
+                console.log('🔧 LaTeX中文下标和\\mathrm{}语法预处理完成');
             }
             
             // 检测网络连接状态
@@ -3236,9 +3764,11 @@ gantt
             window.debugRendering = debugRendering;
             window.debugLaTeXRendering = debugLaTeXRendering;
             
-                         // 统一分块渲染
-             function renderOptimizedContent(content) {
-                 console.log('🚀 开始统一分块渲染');
+                                     // 统一分块渲染 - 修复版本，确保LaTeX预处理被正确调用
+            function renderOptimizedContent(content) {
+                console.log('🚀 开始统一分块渲染');
+                nativePrint('🚀 renderOptimizedContent开始执行');
+                nativePrint(`📝 输入内容长度: ${content.length}`);
                 
                 const contentElement = document.getElementById('rendered-content');
                 if (!contentElement) {
@@ -3248,6 +3778,19 @@ gantt
                 
                 // 清空容器
                 contentElement.innerHTML = '';
+                
+                // 在分块渲染前先执行LaTeX预处理
+                nativePrint('🔧 在分块渲染前执行LaTeX预处理');
+                let processedContent = content;
+                
+                // 检查预处理函数是否存在
+                if (typeof window.preprocessLatexInMarkdown === 'function') {
+                    nativePrint('✅ 找到预处理函数，开始处理');
+                    processedContent = window.preprocessLatexInMarkdown(content);
+                    nativePrint(`🔧 预处理完成，原始长度: ${content.length}, 处理后长度: ${processedContent.length}`);
+                } else {
+                    nativePrint('❌ 预处理函数不存在！');
+                }
                 
                 // 创建加载提示
                 const loadingDiv = document.createElement('div');
@@ -3261,49 +3804,67 @@ gantt
                         // 移除加载提示
                         contentElement.removeChild(loadingDiv);
                         
-                        // 分步渲染
-                        renderContentInSteps(content, contentElement);
+                        // 使用已预处理的内容进行分步渲染
+                        nativePrint('🔧 开始分步渲染已预处理的内容');
+                        renderContentInSteps(processedContent, contentElement);
                         
-                                         } catch (error) {
-                         console.error('❌ 分块渲染失败:', error);
-                         contentElement.innerHTML = '<div style="color: red; padding: 20px;">渲染失败: ' + error.message + '</div>';
-                     }
+                    } catch (error) {
+                        console.error('❌ 分块渲染失败:', error);
+                        nativePrint(`❌ 分块渲染失败: ${error.message}`);
+                        contentElement.innerHTML = '<div style="color: red; padding: 20px;">渲染失败: ' + error.message + '</div>';
+                    }
                 }, 100);
             }
             
-                         // 分步渲染内容
-             function renderContentInSteps(content, container) {
-                 // 根据内容大小智能调整分块策略
-                 const contentSize = content.length;
-                 const strategy = getOptimalChunkStrategy(contentSize);
-                 
-                 // 将内容按策略分块
-                 const chunks = chunkContentByStrategy(content, strategy);
-                 const totalChunks = chunks.length;
-                 let currentChunk = 0;
-                 
-                 console.log(`📄 智能分块渲染: ${totalChunks} 个块, 策略: ${strategy.name}, 内容大小: ${contentSize}`);
+                                     // 分步渲染内容 - 简化版本，专注于正确的LaTeX处理
+            function renderContentInSteps(content, container) {
+                nativePrint('🚀 开始分步渲染内容');
+                nativePrint(`📝 内容长度: ${content.length}`);
+                
+                // 注意：内容已经在renderOptimizedContent中预处理过了
+                // 这里不再需要调用预处理函数，避免重复处理
+                
+                // 根据内容大小智能调整分块策略
+                const contentSize = content.length;
+                const strategy = getOptimalChunkStrategy(contentSize);
+                
+                // 将内容按策略分块
+                const chunks = chunkContentByStrategy(content, strategy);
+                const totalChunks = chunks.length;
+                let currentChunk = 0;
+                
+                console.log(`📄 智能分块渲染: ${totalChunks} 个块, 策略: ${strategy.name}, 内容大小: ${contentSize}`);
+                nativePrint(`📄 智能分块渲染开始: ${totalChunks} 个块, 策略: ${strategy.name}, 内容大小: ${contentSize}`);
                 
                 function renderNextChunk() {
+                    nativePrint(`🔧 renderNextChunk调用: currentChunk=${currentChunk}, totalChunks=${totalChunks}`);
+                    
                     if (currentChunk >= totalChunks) {
+                        nativePrint('✅ 分步渲染完成 - 已达到最大块数');
                         console.log('✅ 分步渲染完成');
                         
                         // 渲染完成后处理
                         setTimeout(() => {
                             processEnhancements(container);
                             
-                                                         // 结束性能监控
-                             if (window.endRenderingTimer) {
-                                 window.endRenderingTimer('分块渲染');
-                             }
+                            // 结束性能监控
+                            if (window.endRenderingTimer) {
+                                window.endRenderingTimer('分块渲染');
+                            }
                         }, 100);
                         
                         return;
                     }
                     
                     const chunk = chunks[currentChunk];
+                    nativePrint(`🔧 获取块${currentChunk}: 长度=${chunk.length}, 内容前100字符="${chunk.substring(0, 100)}"`);
+                    
                     if (chunk.trim()) {
+                        nativePrint(`🔧 块内容非空，开始处理`);
+                        
                         try {
+                            // 直接使用marked解析已预处理的内容
+                            nativePrint(`🔧 使用marked解析第${currentChunk}块`);
                             const chunkHtml = marked.parse(chunk);
                             
                             // 创建块容器
@@ -3319,20 +3880,33 @@ gantt
                                 chunkDiv.style.opacity = '1';
                             }, 50);
                             
+                            nativePrint(`✅ 第${currentChunk}块渲染完成`);
                         } catch (error) {
-                            console.error(`❌ 渲染块 ${currentChunk} 失败:`, error);
+                            nativePrint(`❌ 第${currentChunk}块渲染失败: ${error.message}`);
+                            console.error('块渲染错误:', error);
                         }
+                    } else {
+                        nativePrint(`🔧 块${currentChunk}内容为空，跳过处理`);
                     }
                     
                     currentChunk++;
+                    nativePrint(`🔧 准备渲染下一个块: ${currentChunk}`);
                     
-                                         // 使用策略中的延迟时间
-                     requestAnimationFrame(() => {
-                         setTimeout(renderNextChunk, strategy.delay);
-                     });
+                    // 使用策略中的延迟时间
+                    requestAnimationFrame(() => {
+                        setTimeout(renderNextChunk, strategy.delay);
+                    });
                 }
                 
-                renderNextChunk();
+                // 添加错误处理确保renderNextChunk能够被调用
+                nativePrint(`🔧 准备开始调用renderNextChunk函数`);
+                try {
+                    renderNextChunk();
+                    nativePrint(`🔧 renderNextChunk初始调用成功`);
+                } catch (error) {
+                    nativePrint(`❌ renderNextChunk初始调用失败: ${error.message}`);
+                    console.error('❌ renderNextChunk初始调用失败:', error);
+                }
             }
             
             // 处理增强功能
@@ -3366,6 +3940,10 @@ gantt
                 // 最后渲染数学公式
                 setTimeout(() => {
                     console.log('🧮 开始渲染LaTeX公式');
+                    
+                    // 预处理LaTeX公式中的中文下标（双重保护：markdown预处理 + HTML预处理）
+                    preprocessChineseSubscripts(container);
+                    
                     if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
                         // 使用异步方式渲染，避免阻塞
                         MathJax.typesetPromise([container])
