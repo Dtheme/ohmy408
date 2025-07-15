@@ -50,7 +50,6 @@
   <img src="ohmy408/ScreenShot/2551752500567_.pic.jpg" width="300" alt="文件搜索功能">
 </div>
 
-> 📱 **展示内容**：从左到右依次展示了主界面文件列表、学科分类选择、Markdown文档阅读、LaTeX公式渲染、XMind思维导图查看和文件搜索功能
  
 ## 技术实现
 
