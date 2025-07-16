@@ -5,7 +5,7 @@
 
 TODO:
 - markdown支持编辑
-- 中文等Unicode类\text标签和下表支持
+- 中文等Unicode类\text标签和下标支持
 - Xmind本地渲染深度优化，复杂样式支持，新特性支持
   
 ## 项目背景
