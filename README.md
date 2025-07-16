@@ -125,6 +125,11 @@ ohmy408/
 ### 隐私安全
 - 你也可以作为你自己资料的阅读器，只与你自己的iCloud进行交互，数据不会上传到任何其他服务器
 
+TODO:
+- markdown支持编辑
+- 中文等Unicode类\text标签和下表支持
+- Xmind本地渲染的深度优化
+
 ## 贡献指南
 
 欢迎提交Issues和Pull Requests来改进这个项目！
