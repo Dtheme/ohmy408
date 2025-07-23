@@ -5,7 +5,41 @@
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Markdown + LaTeX 阅读器</title>
                 <!-- 引入 Marked.js -->
-                <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" onload="window.markedLoaded=true;" onerror="window.markedLoadError=true;"></script>
+                <!-- 备用CDN链接 -->
+                <script>
+                    // 早期加载检测
+                    window.markedReady = false;
+                    window.markedLoaded = false;
+                    window.markedLoadError = false;
+                    
+                    // 监听主脚本加载状态
+                    window.addEventListener('load', function() {
+                        setTimeout(function() {
+                            if (typeof marked !== 'undefined' && window.markedLoaded) {
+                                console.log('✅ Marked.js主CDN加载成功');
+                                window.markedReady = true;
+                            } else if (window.markedLoadError || typeof marked === 'undefined') {
+                                console.warn('⚠️ 主CDN加载失败，尝试备用CDN');
+                                var fallbackScript = document.createElement('script');
+                                fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js';
+                                fallbackScript.onload = function() {
+                                    console.log('✅ 备用CDN加载成功');
+                                    window.markedReady = true;
+                                };
+                                fallbackScript.onerror = function() {
+                                    console.error('❌ 备用CDN也加载失败，使用简单markdown解析器');
+                                    window.markedReady = false;
+                                    // 确保简单解析器被初始化
+                                    if (typeof initSimpleMarkdownParser === 'function') {
+                                        initSimpleMarkdownParser();
+                                    }
+                                };
+                                document.head.appendChild(fallbackScript);
+                            }
+                        }, 100); // 给主脚本100ms加载时间
+                    });
+                </script>
                 <!-- 引入 MathJax 配置 -->
                 <script>
                     window.MathJax = {
@@ -1767,57 +1801,151 @@
                 setupMemoryCleanup();
             });
             
+            // 简单的Markdown解析器（降级方案）
+            function initSimpleMarkdownParser() {
+                window.simpleMarkdown = {
+                    parse: function(text) {
+                        if (!text) return '';
+                        
+                        // 基础HTML转义
+                        function escapeHtml(unsafe) {
+                            return unsafe
+                                .replace(/&/g, "&amp;")
+                                .replace(/</g, "&lt;")
+                                .replace(/>/g, "&gt;")
+                                .replace(/"/g, "&quot;")
+                                .replace(/'/g, "&#039;");
+                        }
+                        
+                        // 处理标题
+                        text = text.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+                        text = text.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+                        text = text.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+                        
+                        // 处理粗体和斜体
+                        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                        
+                        // 处理代码块
+                        text = text.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>');
+                        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+                        
+                        // 处理链接
+                        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+                        
+                        // 处理列表
+                        text = text.replace(/^- (.*?)$/gm, '<li>$1</li>');
+                        text = text.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+                        
+                        // 处理段落
+                        text = text.replace(/\n\n/g, '</p><p>');
+                        text = '<p>' + text + '</p>';
+                        
+                        // 清理空段落
+                        text = text.replace(/<p><\/p>/g, '');
+                        
+                        return text;
+                    }
+                };
+                console.log('✅ 简单Markdown解析器已初始化');
+            }
+            
             // 配置 Marked.js - 兼容现代版本和iOS WebView
-            marked.setOptions({
-                breaks: true,        // 支持换行
-                tables: true,        // 支持表格
-                gfm: true,          // 支持GitHub Flavored Markdown
-                headerIds: true,     // 生成标题ID
-                smartLists: true,    // 智能列表
-                smartypants: true,   // 智能标点
-                xhtml: true,         // XHTML兼容
-                mangle: false,       // 禁用邮箱混淆
-                // 移除sanitize选项，使用renderer自定义HTML处理
-            });
-            
-            // 自定义HTML渲染器 - 确保HTML内容被正确解析
-            const renderer = new marked.Renderer();
-            
-            // 保留原始HTML渲染方法
-            const originalHtml = renderer.html;
-            renderer.html = function(html) {
-                // 确保html是字符串类型
-                if (typeof html !== 'string') {
-                    return originalHtml ? originalHtml.call(this, html) : '';
-                }
-                // 直接返回HTML内容，不进行转义
-                return html;
-            };
-            
-            // 简化渲染器，专注于LaTeX和基本HTML标签
-            const originalParagraph = renderer.paragraph;
-            renderer.paragraph = function(text) {
-                // 确保text是字符串类型
-                if (typeof text !== 'string') {
-                    return originalParagraph.call(this, text);
+            function configureMarked() {
+                if (typeof marked === 'undefined') {
+                    console.warn('⚠️ marked.js未加载，跳过配置');
+                    return;
                 }
                 
-                // 检查是否包含LaTeX公式，如果有则保持原始渲染
-                if (text.includes('$') || text.includes('\\(') || text.includes('\\[') || text.includes('\\begin{')) {
-                    // 包含LaTeX公式，使用默认段落渲染以确保MathJax正常处理
-                    return originalParagraph.call(this, text);
+                try {
+                    marked.setOptions({
+                        breaks: true,        // 支持换行
+                        tables: true,        // 支持表格
+                        gfm: true,          // 支持GitHub Flavored Markdown
+                        headerIds: true,     // 生成标题ID
+                        smartLists: true,    // 智能列表
+                        smartypants: true,   // 智能标点
+                        xhtml: true,         // XHTML兼容
+                        mangle: false,       // 禁用邮箱混淆
+                        // 移除sanitize选项，使用renderer自定义HTML处理
+                    });
+                    
+                    // 自定义HTML渲染器 - 确保HTML内容被正确解析
+                    const renderer = new marked.Renderer();
+                    
+                    // 保留原始HTML渲染方法
+                    const originalHtml = renderer.html;
+                    renderer.html = function(html) {
+                        // 确保html是字符串类型
+                        if (typeof html !== 'string') {
+                            return originalHtml ? originalHtml.call(this, html) : '';
+                        }
+                        // 直接返回HTML内容，不进行转义
+                        return html;
+                    };
+                    
+                    // 简化渲染器，专注于LaTeX和基本HTML标签
+                    const originalParagraph = renderer.paragraph;
+                    renderer.paragraph = function(text) {
+                        // 确保text是字符串类型
+                        if (typeof text !== 'string') {
+                            return originalParagraph.call(this, text);
+                        }
+                        
+                        // 检查是否包含LaTeX公式，如果有则保持原始渲染
+                        if (text.includes('$') || text.includes('\\(') || text.includes('\\[') || text.includes('\\begin{')) {
+                            // 包含LaTeX公式，使用默认段落渲染以确保MathJax正常处理
+                            return originalParagraph.call(this, text);
+                        }
+                        
+                        // 否则使用默认的段落渲染
+                        return originalParagraph.call(this, text);
+                    };
+                    
+                    // 应用自定义渲染器
+                    marked.setOptions({
+                        renderer: renderer
+                    });
+                    
+                    console.log('✅ Marked.js配置完成');
+                } catch (error) {
+                    console.error('❌ Marked.js配置失败:', error);
                 }
-                
-                // 否则使用默认的段落渲染
-                return originalParagraph.call(this, text);
-            };
-            
-            // 应用自定义渲染器
-            marked.setOptions({
-                renderer: renderer
-            });
+            }
             
             var text = "";
+            
+            // 安全的Markdown解析函数
+            function safeMarkdownParse(content) {
+                if (!content) return '';
+                
+                // 检查marked.js是否可用
+                if (typeof marked !== 'undefined' && marked.parse) {
+                    try {
+                        return marked.parse(content);
+                    } catch (error) {
+                        console.error('❌ marked.parse()失败:', error);
+                        console.log('🔄 使用简单解析器降级');
+                        return fallbackMarkdownParse(content);
+                    }
+                } else {
+                    console.warn('⚠️ marked.js不可用，使用简单解析器');
+                    return fallbackMarkdownParse(content);
+                }
+            }
+            
+            // 降级Markdown解析函数
+            function fallbackMarkdownParse(content) {
+                if (window.simpleMarkdown && window.simpleMarkdown.parse) {
+                    return window.simpleMarkdown.parse(content);
+                } else {
+                    // 最基础的降级方案
+                    console.warn('⚠️ 简单解析器也不可用，使用最基础方案');
+                    return '<pre style="white-space: pre-wrap; font-family: inherit;">' + 
+                           content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + 
+                           '</pre>';
+                }
+            }
             
             // 初始化 Mermaid
             function initMermaid() {
@@ -3162,8 +3290,49 @@ gantt
                     console.error('Markdown渲染错误:', error);
                     const contentElement = document.getElementById('rendered-content');
                     if (contentElement) {
-                        contentElement.innerHTML = 
-                        '<div style="color: red; padding: 20px;">渲染错误: ' + error.message + '</div>';
+                        const isDarkMode = document.body.classList.contains('dark-mode');
+                        const bgColor = isDarkMode ? '#161b22' : '#fff5f5';
+                        const textColor = isDarkMode ? '#f85149' : '#d73a49';
+                        const borderColor = isDarkMode ? '#f85149' : '#d73a49';
+                        
+                        contentElement.innerHTML = `
+                            <div style="
+                                background-color: ${bgColor};
+                                color: ${textColor};
+                                border: 1px solid ${borderColor};
+                                border-radius: 8px;
+                                padding: 20px;
+                                margin: 20px;
+                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+                            ">
+                                <h3 style="margin-top: 0; font-size: 18px;">📄 Markdown渲染失败</h3>
+                                <p style="margin-bottom: 16px;">
+                                    渲染过程中遇到问题，这可能是由于：
+                                </p>
+                                <ul style="margin-bottom: 16px; padding-left: 20px;">
+                                    <li>网络连接问题导致解析库加载失败</li>
+                                    <li>文档格式不兼容</li>
+                                    <li>内容包含不支持的语法</li>
+                                </ul>
+                                <p style="margin-bottom: 16px; font-size: 14px; opacity: 0.8;">
+                                    <strong>技术详情：</strong> ${error.message}
+                                </p>
+                                <details style="margin-top: 16px;">
+                                    <summary style="cursor: pointer; color: ${textColor};">显示原始内容</summary>
+                                    <pre style="
+                                        margin-top: 10px;
+                                        padding: 16px;
+                                        background-color: ${isDarkMode ? '#0d1117' : '#f6f8fa'};
+                                        border-radius: 6px;
+                                        overflow-x: auto;
+                                        font-size: 13px;
+                                        line-height: 1.4;
+                                        white-space: pre-wrap;
+                                        word-wrap: break-word;
+                                    ">${text || '内容为空'}</pre>
+                                </details>
+                            </div>
+                        `;
                     }
                 }
             }
@@ -3180,8 +3349,8 @@ gantt
                 contentElement.innerHTML = '';
                 
                 try {
-                    // 直接使用marked解析
-                    const html = marked.parse(processedText);
+                    // 使用安全的markdown解析
+                    const html = safeMarkdownParse(processedText);
                     contentElement.innerHTML = html;
                     
                     // 处理增强功能
@@ -3195,7 +3364,43 @@ gantt
                     console.log('✅ 直接渲染完成');
                 } catch (error) {
                     console.error('❌ 直接渲染失败:', error);
-                    contentElement.innerHTML = '<div style="color: red; padding: 20px;">渲染失败: ' + error.message + '</div>';
+                    
+                    const isDarkMode = document.body.classList.contains('dark-mode');
+                    const bgColor = isDarkMode ? '#161b22' : '#fff5f5';
+                    const textColor = isDarkMode ? '#f85149' : '#d73a49';
+                    const borderColor = isDarkMode ? '#f85149' : '#d73a49';
+                    
+                    contentElement.innerHTML = `
+                        <div style="
+                            background-color: ${bgColor};
+                            color: ${textColor};
+                            border: 1px solid ${borderColor};
+                            border-radius: 8px;
+                            padding: 20px;
+                            margin: 20px;
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+                        ">
+                            <h3 style="margin-top: 0; font-size: 18px;">🔧 渲染引擎故障</h3>
+                            <p style="margin-bottom: 12px;">直接渲染模式失败，可能的原因：</p>
+                            <ul style="margin-bottom: 16px; padding-left: 20px;">
+                                <li>Markdown解析库未正确加载</li>
+                                <li>网络连接中断</li>
+                                <li>文档内容格式问题</li>
+                            </ul>
+                            <p style="font-size: 14px; opacity: 0.8; margin-bottom: 16px;">
+                                <strong>错误信息：</strong> ${error.message}
+                            </p>
+                            <div style="
+                                background-color: ${isDarkMode ? '#0d1117' : '#f0f8ff'};
+                                padding: 12px;
+                                border-radius: 6px;
+                                font-size: 13px;
+                                margin-top: 12px;
+                            ">
+                                💡 <strong>建议：</strong>请检查网络连接，或尝试刷新页面重新加载
+                            </div>
+                        </div>
+                    `;
                 }
             }
             
@@ -3642,6 +3847,9 @@ gantt
                     // 检测网络状态
                     checkNetworkStatus();
                     
+                    // 配置marked.js（如果可用）
+                    configureMarked();
+                    
                     // 初始化目录功能
                     initTOC();
                     
@@ -3863,9 +4071,9 @@ gantt
                         nativePrint(`🔧 块内容非空，开始处理`);
                         
                         try {
-                            // 直接使用marked解析已预处理的内容
-                            nativePrint(`🔧 使用marked解析第${currentChunk}块`);
-                            const chunkHtml = marked.parse(chunk);
+                            // 使用安全的markdown解析已预处理的内容
+                            nativePrint(`🔧 使用安全解析器解析第${currentChunk}块`);
+                            const chunkHtml = safeMarkdownParse(chunk);
                             
                             // 创建块容器
                             const chunkDiv = document.createElement('div');
