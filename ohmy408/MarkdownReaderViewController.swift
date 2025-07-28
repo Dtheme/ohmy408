@@ -53,11 +53,17 @@ class MarkdownReaderViewController: UIViewController {
         userContentController.add(self, name: "nativePrint")
         config.userContentController = userContentController
         
-        // 配置网络相关设置
+        // 配置网络相关设置 - 优化沙盒兼容性
         if #available(iOS 14.0, *) {
-            config.limitsNavigationsToAppBoundDomains = false
-            print("✅ 允许访问外部域名")
+            config.limitsNavigationsToAppBoundDomains = true // 限制为应用域名，减少沙盒冲突
+            print("✅ 限制访问域名以提高沙盒兼容性")
         }
+        
+        // 禁用数据检测器以减少系统资源访问
+        config.dataDetectorTypes = []
+        
+        // 设置进程池以提高隔离性
+        config.processPool = WKProcessPool()
         
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
@@ -187,6 +193,9 @@ class MarkdownReaderViewController: UIViewController {
     private var isTemplateLoading: Bool = false
     private var themeInitRetryCount: Int = 0
     private let maxThemeInitRetryCount: Int = 3
+    private var isFirstTimeInstall: Bool = false
+    private var sandboxInitialized: Bool = false
+
     
     // MARK: - 加载状态管理
     
@@ -460,88 +469,17 @@ class MarkdownReaderViewController: UIViewController {
     
     // MARK: - WebView辅助方法
     private func hideWKBackdropView(in webView: WKWebView) {
-        // 递归遍历WebView的子视图，彻底清理所有可能的边框和背景
-        func cleanupWebViewLayers(in view: UIView, level: Int = 0) {
-            let className = NSStringFromClass(type(of: view))
-            let indent = String(repeating: "  ", count: level)
-            print("🔍 \(indent)检查视图: \(className)")
-            
-            // 针对所有WebKit内部视图进行处理
-            if className.contains("WK") {
-                // 设置透明背景
-                view.backgroundColor = UIColor.clear
-                view.isOpaque = false
-                
-                // 移除边框
-                view.layer.borderWidth = 0
-                view.layer.borderColor = UIColor.clear.cgColor
-                
-                // 移除阴影
-                view.layer.shadowOpacity = 0
-                view.layer.shadowRadius = 0
-                
-                // 特殊处理不同类型的WebKit视图
-                if className.contains("WKBackdrop") {
-                    view.isHidden = true
-                    view.alpha = 0
-                    print("🔧 \(indent)已隐藏WKBackdropView: \(className)")
-                }
-                else if className.contains("WKContentView") {
-                    // WKContentView特殊处理
-                    view.clipsToBounds = false
-                    view.layer.masksToBounds = false
-                    
-                    // 移除可能的边距
-                    if let scrollView = view.superview as? UIScrollView {
-                        scrollView.contentInset = .zero
-                        scrollView.scrollIndicatorInsets = .zero
-                        scrollView.contentOffset = .zero
-                    }
-                    
-                    print("🔧 \(indent)已处理WKContentView: \(className)")
-                }
-                else if className.contains("WKScrollView") {
-                    // WKScrollView特殊处理
-                    if let scrollView = view as? UIScrollView {
-                        scrollView.contentInset = .zero
-                        scrollView.scrollIndicatorInsets = .zero
-                        scrollView.contentInsetAdjustmentBehavior = .never
-                    }
-                    print("🔧 \(indent)已处理WKScrollView: \(className)")
-                }
-                
-                print("🔧 \(indent)已清理WebKit视图: \(className)")
-            }
-            
-            // 递归处理子视图
-            for subview in view.subviews {
-                cleanupWebViewLayers(in: subview, level: level + 1)
-            }
-        }
-        
-        print("🔧 开始清理WebView层次结构...")
-        cleanupWebViewLayers(in: webView)
-        
-        // 额外的WebView设置
+        // 简化：只做必要的WebView优化
+        webView.isOpaque = false
+        webView.backgroundColor = UIColor.clear
+        webView.scrollView.backgroundColor = UIColor.clear
         webView.scrollView.contentInset = .zero
         webView.scrollView.scrollIndicatorInsets = .zero
         webView.scrollView.contentInsetAdjustmentBehavior = .never
-        webView.scrollView.clipsToBounds = false
+        webView.scrollView.showsVerticalScrollIndicator = false
+        webView.scrollView.showsHorizontalScrollIndicator = false
         webView.clipsToBounds = false
-        
-        // 添加持续监听，防止动态添加的视图
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            guard let self = self, self.view.window != nil else { return }
-            print("🔧 延迟清理WebView层次结构...")
-            cleanupWebViewLayers(in: self.webView)
-        }
-        
-        // 再次延迟处理，确保完全清理
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self, self.view.window != nil else { return }
-            print("🔧 最终清理WebView层次结构...")
-            cleanupWebViewLayers(in: self.webView)
-        }
+        webView.scrollView.clipsToBounds = false
     }
     
     // MARK: - 生命周期
@@ -554,9 +492,84 @@ class MarkdownReaderViewController: UIViewController {
         // 设置主题管理器
         setupThemeManager()
         
+        // 确保初始状态正确
+        ensureInitialState()
+        
         // 延迟加载HTML模板，确保UI完全设置完成
         DispatchQueue.main.async { [weak self] in
             self?.loadHTMLTemplateIfNeeded()
+        }
+    }
+    
+    /// 确保初始状态正确设置
+    private func ensureInitialState() {
+        print("🔧 确保初始状态正确设置")
+        
+        // 检测是否为首次安装
+        detectFirstTimeInstall()
+        
+        // 重置所有状态标志到安全的初始状态
+        isHTMLTemplateLoaded = false
+        isTemplateLoading = false
+        isProcessingAsyncOperation = false
+        hasNetworkPermission = false
+        needsRefreshAfterPermission = false
+        retryCount = 0
+        themeInitRetryCount = 0
+        
+        // 清理待处理内容，防止旧内容干扰
+        pendingMarkdownContent = nil
+        
+        // 边界检查：确保UI状态正确
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.hideError()
+            self.hideLoadingState()
+        }
+        
+        // 检查沙盒状态
+        checkSandboxStatus()
+        
+        // 重置加载状态
+        resetLoadingState()
+        
+        print("✅ 初始状态已重置")
+    }
+    
+    /// 检测是否为首次安装
+    private func detectFirstTimeInstall() {
+        let userDefaults = UserDefaults.standard
+        let hasLaunchedBefore = userDefaults.bool(forKey: "HasLaunchedBefore")
+        
+        if !hasLaunchedBefore {
+            isFirstTimeInstall = true
+            print("🆕 检测到首次安装")
+            
+            // 标记为已启动过
+            userDefaults.set(true, forKey: "HasLaunchedBefore")
+            userDefaults.synchronize()
+        } else {
+            isFirstTimeInstall = false
+            print("🔄 应用已启动过")
+        }
+    }
+    
+    /// 检查沙盒状态
+    private func checkSandboxStatus() {
+        // 检查应用Bundle资源的访问权限
+        guard let bundlePath = Bundle.main.bundlePath as NSString? else {
+            print("❌ 无法获取Bundle路径")
+            sandboxInitialized = false
+            return
+        }
+        
+        let htmlPath = bundlePath.appendingPathComponent("markdown_viewer.html")
+        sandboxInitialized = FileManager.default.isReadableFile(atPath: htmlPath)
+        
+        print("📂 沙盒状态检查: \(sandboxInitialized ? "已初始化" : "未初始化")")
+        
+        if isFirstTimeInstall && !sandboxInitialized {
+            print("🔒 首次安装且沙盒未初始化，可能出现权限延迟")
         }
     }
     
@@ -591,10 +604,6 @@ class MarkdownReaderViewController: UIViewController {
         
         // 清理JavaScript消息处理器
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "nativePrint")
-        
-        // 清理ThemeManager中的WebView引用
-        // 注意：由于ThemeManager.setWebView不接受nil，我们不直接设置为nil
-        // WebView引用在ThemeManager中是weak引用，会自动置nil
         
         // 统一移除所有通知观察者
         removeNotificationObservers()
@@ -787,23 +796,52 @@ class MarkdownReaderViewController: UIViewController {
     
     // MARK: - 内容加载
     private func loadHTMLTemplateIfNeeded() {
-        // 避免重复加载
-        guard !isHTMLTemplateLoaded && !isTemplateLoading else {
-            print("📄 HTML模板已加载或正在加载中，跳过")
+        // 防止重复操作的状态检查
+        if isHTMLTemplateLoaded {
+            print("📄 HTML模板已加载完成，跳过")
             return
         }
         
+        if isTemplateLoading {
+            print("📄 HTML模板正在加载中，跳过重复加载")
+            return
+        }
+        
+        // 边界检查：确保WebView已初始化
+        guard webView.window != nil || view.window != nil else {
+            print("⚠️ WebView或View未准备好，延迟加载HTML模板")
+            DispatchQueue.main.async { [weak self] in
+                self?.loadHTMLTemplateIfNeeded()
+            }
+            return
+        }
+        
+        // 验证HTML文件是否存在且可访问
         guard let htmlURL = Bundle.main.url(forResource: "markdown_viewer", withExtension: "html") else {
-            showError(message: "无法找到Markdown模板文件")
+            print("❌ 无法找到markdown_viewer.html文件")
+            showError(message: "无法找到Markdown模板文件，请检查应用资源")
             return
         }
         
-        print("🔄 开始加载HTML模板")
+        // 验证文件可读性，简化处理
+        if !FileManager.default.isReadableFile(atPath: htmlURL.path) {
+            print("❌ HTML文件不可读，可能存在权限问题: \(htmlURL.path)")
+            showError(message: "无法访问HTML模板文件\n可能是首次安装权限问题\n请重启应用")
+            return
+        }
+        
+        print("🔄 开始加载HTML模板: \(htmlURL.path)")
+        
+        // 重置所有状态标志
+        isHTMLTemplateLoaded = false
         isTemplateLoading = true
-        themeInitRetryCount = 0 // 重置主题初始化重试计数器
+        themeInitRetryCount = 0
+        retryCount = 0
+        
         resetLoadingState()
         showDetailedLoadingState(step: .loadingTemplate, progress: 0.1, detail: "初始化HTML模板和JavaScript引擎...")
         
+        // 简化：直接加载HTML文件
         let request = URLRequest(url: htmlURL)
         webView.load(request)
     }
@@ -812,8 +850,29 @@ class MarkdownReaderViewController: UIViewController {
         loadHTMLTemplateIfNeeded()
     }
     
+
+    
     private func loadMarkdownContent() {
-        guard let file = markdownFile else { return }
+        // 边界检查：确保文件对象存在
+        guard let file = markdownFile else { 
+            print("⚠️ markdownFile为nil，无法加载内容")
+            hideLoadingState()
+            return 
+        }
+        
+        // 边界检查：确保文件URL有效
+        guard file.url.isFileURL else {
+            print("❌ 文件URL无效: \(file.url)")
+            showError(message: "文件路径无效")
+            return
+        }
+        
+        // 边界检查：确保文件存在
+        guard FileManager.default.fileExists(atPath: file.url.path) else {
+            print("❌ 文件不存在: \(file.url.path)")
+            showError(message: "文件不存在: \(file.displayName)")
+            return
+        }
         
         // 确保HTML模板已开始加载
         loadHTMLTemplateIfNeeded()
@@ -827,44 +886,76 @@ class MarkdownReaderViewController: UIViewController {
                 let fileSize = content.count
                 let fileSizeText = self?.formatFileSize(fileSize) ?? "\(fileSize) 字符"
                 
+                // 边界检查：验证内容合理性
+                guard fileSize > 0 else {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.showError(message: "文件内容为空")
+                    }
+                    return
+                }
+                
                 DispatchQueue.main.async { [weak self] in
-                    self?.markdownContent = content
-                    self?.pendingMarkdownContent = content
+                    guard let self = self else { return }
+                    
+                    self.markdownContent = content
+                    self.pendingMarkdownContent = content
                     print("📄 Markdown内容已读取，文件大小: \(fileSize) 字符")
                     
                     // 如果HTML模板已加载完成，立即渲染
-                    if self?.isHTMLTemplateLoaded == true {
-                        self?.renderMarkdownContent()
+                    if self.isHTMLTemplateLoaded {
+                        self.renderMarkdownContent()
                     } else {
-                        self?.showDetailedLoadingState(step: .preparingRenderer, progress: 0.8, detail: "等待渲染引擎就绪，文件大小: \(fileSizeText)")
+                        self.showDetailedLoadingState(step: .preparingRenderer, progress: 0.8, detail: "等待渲染引擎就绪，文件大小: \(fileSizeText)")
                     }
                 }
             } catch {
                 DispatchQueue.main.async { [weak self] in
+                    print("❌ 文件读取失败: \(error)")
                     self?.showError(message: "无法读取文件内容: \(error.localizedDescription)")
                 }
             }
         }
     }
     
-    /// 格式化文件大小
+    /// 格式化文件大小 - 边界安全版本
     private func formatFileSize(_ size: Int) -> String {
+        // 边界检查：防止负数或异常值
+        guard size >= 0 else {
+            return "0 字符"
+        }
+        
         if size < 1024 {
             return "\(size) 字符"
         } else if size < 1024 * 1024 {
-            return String(format: "%.1f KB", Double(size) / 1024.0)
+            let kb = Double(size) / 1024.0
+            return String(format: "%.1f KB", kb)
+        } else if size < 1024 * 1024 * 1024 {
+            let mb = Double(size) / (1024.0 * 1024.0)
+            return String(format: "%.1f MB", mb)
         } else {
-            return String(format: "%.1f MB", Double(size) / (1024.0 * 1024.0))
+            let gb = Double(size) / (1024.0 * 1024.0 * 1024.0)
+            return String(format: "%.1f GB", gb)
         }
     }
     
     private func renderMarkdownContent() {
+        // 边界检查：确保内容不为空
         guard !markdownContent.isEmpty else { 
             print("⚠️ Markdown内容为空，跳过渲染")
+            hideLoadingState()
             return 
         }
         
-        // 检查HTML模板是否已加载
+        // 边界检查：确保WebView已初始化
+        guard webView.window != nil || view.window != nil else {
+            print("⚠️ WebView未准备好，延迟渲染")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.renderMarkdownContent()
+            }
+            return
+        }
+        
+        // 状态检查：HTML模板是否已加载
         if !isHTMLTemplateLoaded {
             print("⏳ HTML模板未加载完成，将内容标记为待渲染")
             pendingMarkdownContent = markdownContent
@@ -874,6 +965,13 @@ class MarkdownReaderViewController: UIViewController {
         // 防止并发渲染操作
         guard !isProcessingAsyncOperation else {
             print("⚠️ 已有异步操作在进行中，跳过渲染")
+            return
+        }
+        
+        // 边界检查：内容大小限制（防止超大文件导致问题）
+        if markdownContent.count > 5_000_000 { // 5MB 限制
+            print("⚠️ 文件过大(\(formatFileSize(markdownContent.count)))，可能影响性能")
+            showError(message: "文件过大(\(formatFileSize(markdownContent.count)))\n建议使用较小的文件")
             return
         }
         
@@ -889,6 +987,19 @@ class MarkdownReaderViewController: UIViewController {
     }
     
     private func renderMarkdownDirectly() {
+        // 边界检查：确保状态正确
+        guard isHTMLTemplateLoaded else {
+            print("❌ HTML模板未加载，无法渲染")
+            showError(message: "HTML模板未准备好")
+            return
+        }
+        
+        guard !markdownContent.isEmpty else {
+            print("❌ Markdown内容为空，无法渲染")
+            showError(message: "内容为空")
+            return
+        }
+        
         print("🎨 开始直接渲染Markdown")
         
         let contentSize = markdownContent.count
@@ -896,8 +1007,13 @@ class MarkdownReaderViewController: UIViewController {
         
         showDetailedLoadingState(step: .rendering, progress: 0.2, detail: "渲染\(fileSizeText)的文档...")
         
-        // 转义JavaScript字符串
+        // 转义JavaScript字符串，确保安全
         let escapedContent = escapeForJavaScript(markdownContent)
+        
+        // 边界检查：避免过长的内容导致问题
+        if escapedContent.count > markdownContent.count * 2 {
+            print("⚠️ 转义后内容过长，可能包含大量特殊字符")
+        }
         
         let renderScript = """
             try {
@@ -917,9 +1033,11 @@ class MarkdownReaderViewController: UIViewController {
         """
         
         webView.evaluateJavaScript(renderScript) { [weak self] (result, error) in
+            guard let self = self else { return }
+            
             if let error = error {
                 print("❌ renderMarkdown调用失败: \(error)")
-                self?.showError(message: "渲染失败: \(error.localizedDescription)")
+                self.showError(message: "渲染失败: \(error.localizedDescription)")
                 return
             }
             
@@ -927,25 +1045,200 @@ class MarkdownReaderViewController: UIViewController {
                 switch resultString {
                 case "render_success":
                     print("✅ renderMarkdown调用成功")
-                    // 延迟隐藏加载状态，给渲染时间
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                        guard let self = self, self.isProcessingAsyncOperation else { return }
-                        self.hideLoadingState()
-                        self.isProcessingAsyncOperation = false
-                    }
+                    // 进入增强功能处理阶段，而不是直接结束
+                    self.processEnhancingFeatures()
                 case "render_function_missing":
                     print("❌ renderMarkdown函数不存在")
-                    self?.showError(message: "渲染函数不存在，请检查HTML模板")
+                    self.showError(message: "渲染函数不存在，请检查HTML模板")
                 case "render_failed":
                     print("❌ renderMarkdown调用失败")
-                    self?.showError(message: "渲染调用失败")
+                    self.showError(message: "渲染调用失败")
                 default:
                     print("⚠️ 未知的渲染结果: \(resultString)")
-                    self?.showError(message: "渲染过程异常")
+                    self.showError(message: "渲染过程异常")
                 }
             } else {
                 print("⚠️ 渲染结果为空或类型错误")
-                self?.showError(message: "渲染结果异常")
+                self.showError(message: "渲染结果异常")
+            }
+        }
+    }
+    
+    /// 处理增强功能阶段
+    private func processEnhancingFeatures() {
+        print("🔧 开始处理增强功能")
+        showDetailedLoadingState(step: .enhancing, progress: 0.1, detail: "处理LaTeX公式和Mermaid图表...")
+        
+        // 处理增强功能的JavaScript
+        let enhanceScript = """
+            try {
+                var container = document.getElementById('rendered-content');
+                if (container) {
+                    console.log('🔗 处理链接功能');
+                    if (typeof processLinks === 'function') processLinks(container);
+                    
+                    console.log('🖼️ 处理图片功能');
+                    if (typeof addImageZoomFunction === 'function') addImageZoomFunction(container);
+                    
+                    console.log('📋 处理代码复制功能');
+                    if (typeof addCodeCopyButtons === 'function') addCodeCopyButtons(container);
+                    
+                    console.log('☑️ 处理任务列表功能');
+                    if (typeof enhanceTaskLists === 'function') enhanceTaskLists(container);
+                    
+                    console.log('🎨 处理Mermaid图表');
+                    if (typeof renderMermaidDiagrams === 'function') renderMermaidDiagrams(container);
+                    
+                    console.log('📱 优化移动端表格');
+                    if (typeof optimizeTablesForMobile === 'function') optimizeTablesForMobile(container);
+                    
+                    console.log('🏷️ 优化HTML元素');
+                    if (typeof enhanceHTMLElements === 'function') enhanceHTMLElements(container);
+                    
+                    console.log('📑 生成目录');
+                    if (typeof generateTOC === 'function') generateTOC();
+                    
+                    console.log('✅ 增强功能处理完成');
+                }
+                'enhance_success';
+            } catch(e) {
+                console.error('❌ 增强功能处理失败:', e);
+                'enhance_failed';
+            }
+        """
+        
+        webView.evaluateJavaScript(enhanceScript) { [weak self] (result, error) in
+            guard let self = self else { return }
+            
+            // 更新进度到增强功能的70%
+            self.showDetailedLoadingState(step: .enhancing, progress: 0.7, detail: "渲染LaTeX数学公式...")
+            
+            if let error = error {
+                print("❌ 增强功能处理失败: \(error)")
+                // 即使增强功能失败，也继续到最终化阶段
+                self.processMathJax()
+            } else if let resultString = result as? String {
+                if resultString == "enhance_success" {
+                    print("✅ 增强功能处理成功")
+                } else {
+                    print("⚠️ 增强功能处理返回: \(resultString)")
+                }
+                // 继续处理MathJax
+                self.processMathJax()
+            } else {
+                print("⚠️ 增强功能处理结果异常")
+                self.processMathJax()
+            }
+        }
+    }
+    
+    /// 处理MathJax数学公式渲染
+    private func processMathJax() {
+        print("🧮 开始渲染LaTeX公式")
+        
+        let mathScript = """
+            try {
+                if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+                    var container = document.getElementById('rendered-content');
+                    if (container) {
+                        // 异步执行MathJax渲染
+                        setTimeout(function() {
+                            MathJax.typesetPromise([container])
+                            .then(function() {
+                                console.log('✅ LaTeX渲染完成');
+                            })
+                            .catch(function(err) {
+                                console.error('❌ LaTeX渲染错误:', err);
+                            });
+                        }, 100);
+                        
+                        console.log('🧮 LaTeX渲染已启动');
+                        'math_started';
+                    } else {
+                        'container_not_found';
+                    }
+                } else if (typeof MathJax !== 'undefined' && MathJax.typeset) {
+                    // 降级到传统的typeset方法
+                    var container = document.getElementById('rendered-content');
+                    if (container) {
+                        setTimeout(function() {
+                            try {
+                                MathJax.typeset([container]);
+                                console.log('✅ LaTeX渲染完成 (传统模式)');
+                            } catch (err) {
+                                console.error('❌ LaTeX渲染错误 (传统模式):', err);
+                            }
+                        }, 100);
+                        
+                        console.log('🧮 LaTeX渲染已启动 (传统模式)');
+                        'math_started_legacy';
+                    } else {
+                        'container_not_found';
+                    }
+                } else {
+                    console.log('⚠️ MathJax未加载或不支持渲染方法');
+                    'mathjax_not_available';
+                }
+            } catch(e) {
+                console.error('❌ LaTeX渲染启动失败:', e);
+                'math_failed';
+            }
+        """
+        
+        webView.evaluateJavaScript(mathScript) { [weak self] (result, error) in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("❌ LaTeX渲染启动失败: \(error)")
+                self.finalizeRendering(withMathJax: false)
+            } else if let resultString = result as? String {
+                switch resultString {
+                case "math_started":
+                    print("✅ LaTeX渲染已启动 (Promise模式)")
+                    self.finalizeRendering(withMathJax: true)
+                case "math_started_legacy":
+                    print("✅ LaTeX渲染已启动 (传统模式)")
+                    self.finalizeRendering(withMathJax: true)
+                case "container_not_found":
+                    print("⚠️ 未找到内容容器，跳过LaTeX渲染")
+                    self.finalizeRendering(withMathJax: false)
+                case "mathjax_not_available":
+                    print("⚠️ MathJax不可用，跳过LaTeX渲染")
+                    self.finalizeRendering(withMathJax: false)
+                case "math_failed":
+                    print("❌ LaTeX渲染启动失败")
+                    self.finalizeRendering(withMathJax: false)
+                default:
+                    print("⚠️ LaTeX渲染返回未知结果: \(resultString)")
+                    self.finalizeRendering(withMathJax: false)
+                }
+            } else {
+                print("⚠️ LaTeX渲染结果为空")
+                self.finalizeRendering(withMathJax: false)
+            }
+        }
+    }
+    
+    /// 最终化渲染过程
+    private func finalizeRendering(withMathJax: Bool) {
+        print("🎯 开始最终化渲染")
+        showDetailedLoadingState(step: .finalizing, progress: 0.3, detail: "最终优化中...")
+        
+        // 给MathJax时间完成渲染
+        let mathJaxDelay = withMathJax ? 1.0 : 0.3
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + mathJaxDelay) { [weak self] in
+            guard let self = self, self.isProcessingAsyncOperation else { return }
+            
+            self.showDetailedLoadingState(step: .finalizing, progress: 0.8, detail: "优化完成！")
+            
+            // 再等一会儿让用户看到完成状态
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                guard let self = self, self.isProcessingAsyncOperation else { return }
+                
+                print("✅ 渲染流程全部完成")
+                self.hideLoadingState()
+                self.isProcessingAsyncOperation = false
             }
         }
     }
@@ -2003,13 +2296,25 @@ class MarkdownReaderViewController: UIViewController {
     
     // MARK: - 错误处理
     private func showError(message: String) {
-        hideLoadingState()
-        isProcessingAsyncOperation = false // 重置异步操作标志
-        errorView.isHidden = false
-        webView.isHidden = true
-        
-        if let messageLabel = errorView.subviews.first?.subviews.compactMap({ $0 as? UIStackView }).first?.arrangedSubviews[2] as? UILabel {
-            messageLabel.text = message
+        // 确保在主线程执行UI操作
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // 重置所有状态到安全状态
+            self.hideLoadingState()
+            self.isProcessingAsyncOperation = false
+            self.isTemplateLoading = false
+            
+            // 显示错误界面
+            self.errorView.isHidden = false
+            self.webView.isHidden = true
+            
+            // 更新错误消息
+            if let messageLabel = self.errorView.subviews.first?.subviews.compactMap({ $0 as? UIStackView }).first?.arrangedSubviews[2] as? UILabel {
+                messageLabel.text = message
+            }
+            
+            print("❌ 显示错误信息: \(message)")
         }
     }
     
@@ -2049,21 +2354,30 @@ class MarkdownReaderViewController: UIViewController {
         print("🔄 刷新WebView内容")
         hideError()
         
-        // 重置状态
-        isHTMLTemplateLoaded = false
-        isTemplateLoading = false
-        retryCount = 0
-        themeInitRetryCount = 0 // 重置主题初始化重试计数器
-        
         // 保存当前内容作为待渲染内容
         if !markdownContent.isEmpty {
             pendingMarkdownContent = markdownContent
-            print("📄 保存当前Markdown内容，等待HTML模板重新加载")
+            print("📄 保存当前Markdown内容(\(markdownContent.count)字符)，等待HTML模板重新加载")
         }
+        
+        // 重置所有状态标志
+        isHTMLTemplateLoaded = false
+        isTemplateLoading = false
+        isProcessingAsyncOperation = false
+        retryCount = 0
+        themeInitRetryCount = 0
+        needsRefreshAfterPermission = false
+        
+        // 停止当前加载
+        webView.stopLoading()
         
         resetLoadingState()
         showDetailedLoadingState(step: .initializing, progress: 0.0, detail: "正在重新初始化...")
-        loadHTMLTemplate()
+        
+        // 延迟一点时间再加载
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.loadHTMLTemplate()
+        }
     }
     
     // MARK: - 主题管理事件
@@ -2206,7 +2520,41 @@ class MarkdownReaderViewController: UIViewController {
     }
     
     // MARK: - 工具方法
+    /// 验证应用状态是否正常
+    private func validateAppState() -> Bool {
+        // 检查视图状态
+        guard view.window != nil else {
+            print("❌ 视图未添加到窗口")
+            return false
+        }
+        
+        // 检查WebView状态
+        guard webView.superview != nil else {
+            print("❌ WebView未添加到视图层次")
+            return false
+        }
+        
+        // 检查内存状态
+        let memoryWarning = ProcessInfo.processInfo.thermalState == .critical
+        if memoryWarning {
+            print("⚠️ 系统内存警告")
+        }
+        
+        return true
+    }
+    
+    /// 安全的JavaScript字符串转义 - 处理边界情况
     private func escapeForJavaScript(_ string: String) -> String {
+        // 边界检查：空字符串处理
+        guard !string.isEmpty else {
+            return ""
+        }
+        
+        // 边界检查：过长字符串警告
+        if string.count > 1_000_000 {
+            print("⚠️ 转义字符串过长(\(formatFileSize(string.count)))，可能影响性能")
+        }
+        
         return string
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "'", with: "\\'")
@@ -2214,6 +2562,8 @@ class MarkdownReaderViewController: UIViewController {
             .replacingOccurrences(of: "\n", with: "\\n")
             .replacingOccurrences(of: "\r", with: "\\r")
             .replacingOccurrences(of: "\t", with: "\\t")
+            .replacingOccurrences(of: "\u{2028}", with: "\\u2028") // Line separator
+            .replacingOccurrences(of: "\u{2029}", with: "\\u2029") // Paragraph separator
     }
     
     /// 预处理内容以减少渲染负担
@@ -2305,6 +2655,8 @@ class MarkdownReaderViewController: UIViewController {
         
         return processedLines.joined(separator: "\n")
     }
+    
+    
 }
 
 
@@ -2397,52 +2749,93 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
         print("✅ WebView导航完成")
         isHTMLTemplateLoaded = true
         isTemplateLoading = false
+        
         showDetailedLoadingState(step: .loadingTemplate, progress: 0.9, detail: "HTML模板和JavaScript引擎加载完成")
         
-        // 确保完全隐藏WKBackdropView
+        // 简化WebView优化
         hideWKBackdropView(in: webView)
         
-        // 验证DOM是否真正准备好
-        let verifyDOMScript = """
+        // 简化DOM验证 - 直接执行，不重试
+        verifyDOMAndRender()
+    }
+    
+    /// 简化的DOM验证和渲染
+    private func verifyDOMAndRender() {
+        // 边界检查：确保WebView可用
+        guard !webView.isLoading else {
+            print("⚠️ WebView仍在加载中，延迟DOM验证")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.verifyDOMAndRender()
+            }
+            return
+        }
+        
+        print("🔍 验证DOM就绪状态")
+        
+        // 简化的DOM验证脚本
+        let domScript = """
             (function() {
                 try {
                     var element = document.getElementById('rendered-content');
-                    var hasRenderFunction = typeof renderMarkdown === 'function';
-                    console.log('DOM验证: element=' + (element !== null) + ', renderFunction=' + hasRenderFunction);
+                    var hasRenderFunction = typeof window.renderMarkdown === 'function';
                     return element !== null && hasRenderFunction;
                 } catch(e) {
-                    console.log('DOM验证错误: ' + e.message);
                     return false;
                 }
             })();
         """
         
-        webView.evaluateJavaScript(verifyDOMScript) { [weak self] (result, error) in
+        webView.evaluateJavaScript(domScript) { [weak self] (result, error) in
+            guard let self = self else { return }
+            
             if let error = error {
                 print("❌ DOM验证脚本执行错误: \(error)")
-                self?.isTemplateLoading = false
-            } else if let isReady = result as? Bool {
-                print("🔍 DOM验证结果: \(isReady)")
-                if isReady {
-                    // DOM已准备好，首先同步当前主题到WebView
-                    self?.syncInitialThemeToWebView()
-                    
-                    // 然后检查是否有待渲染的内容
-                    if let pendingContent = self?.pendingMarkdownContent, !pendingContent.isEmpty {
-                        print("📄 发现待渲染内容，开始渲染")
-                        self?.markdownContent = pendingContent
-                        self?.pendingMarkdownContent = nil
-                        self?.renderMarkdownContent()
-                    } else if !(self?.markdownContent.isEmpty ?? true) {
-                        print("📄 渲染当前Markdown内容")
-                        self?.renderMarkdownContent()
-                    } else {
-                        print("📄 无内容需要渲染")
-                        self?.hideLoadingState()
+                // 延迟重试，最多重试3次
+                if self.retryCount < 3 {
+                    self.retryCount += 1
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                        self?.verifyDOMAndRender()
                     }
                 } else {
-                    print("⚠️ DOM未完全准备好，等待后续检查")
-                    self?.hideLoadingState()
+                    print("❌ DOM验证重试次数已达上限")
+                    self.showError(message: "渲染环境初始化失败\n请尝试刷新页面")
+                }
+                return
+            }
+            
+            if let isReady = result as? Bool, isReady {
+                print("✅ DOM验证成功")
+                
+                // 重置重试计数
+                self.retryCount = 0
+                
+                // 同步主题
+                self.syncInitialThemeToWebView()
+                
+                // 开始渲染
+                if let pendingContent = self.pendingMarkdownContent, !pendingContent.isEmpty {
+                    print("📄 发现待渲染内容，开始渲染")
+                    self.markdownContent = pendingContent
+                    self.pendingMarkdownContent = nil
+                    self.renderMarkdownContent()
+                } else if !self.markdownContent.isEmpty {
+                    print("📄 渲染当前Markdown内容")
+                    self.renderMarkdownContent()
+                } else {
+                    print("📄 无内容需要渲染")
+                    self.hideLoadingState()
+                }
+            } else {
+                print("❌ DOM验证失败，延迟重试")
+                // 限制重试次数，防止无限循环
+                if self.retryCount < 3 {
+                    self.retryCount += 1
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                        self?.verifyDOMAndRender()
+                    }
+                } else {
+                    print("❌ DOM验证重试次数已达上限")
+                    self.showError(message: "渲染环境初始化失败\n请尝试刷新页面")
                 }
             }
         }
@@ -2450,33 +2843,63 @@ extension MarkdownReaderViewController: WKNavigationDelegate {
     
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         print("❌ WebView加载失败: \(error.localizedDescription)")
+        print("❌ 错误详情: \(error)")
         
         // 重置加载状态
         isHTMLTemplateLoaded = false
         isTemplateLoading = false
+        isProcessingAsyncOperation = false
         
-        // 检查是否是网络权限问题
-        if error.localizedDescription.contains("网络") || error.localizedDescription.contains("network") {
-            needsRefreshAfterPermission = true
-            showError(message: "首次加载需要网络权限，授权后将自动刷新")
-        } else {
-            showError(message: "网页加载失败: \(error.localizedDescription)")
-        }
+        // 分析错误类型并提供相应的解决方案
+        handleWebViewLoadError(error)
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         print("❌ WebView预加载失败: \(error.localizedDescription)")
+        print("❌ 错误详情: \(error)")
         
         // 重置加载状态
         isHTMLTemplateLoaded = false
         isTemplateLoading = false
+        isProcessingAsyncOperation = false
         
-        // 检查是否是网络权限问题
-        if error.localizedDescription.contains("网络") || error.localizedDescription.contains("network") {
-            needsRefreshAfterPermission = true
-            showError(message: "首次加载需要网络权限，授权后将自动刷新")
+        // 分析错误类型并提供相应的解决方案
+        handleWebViewLoadError(error)
+    }
+    
+    /// 简化的WebView加载错误处理
+    private func handleWebViewLoadError(_ error: Error) {
+        let errorCode = (error as NSError).code
+        
+        print("❌ WebView加载失败: \(error.localizedDescription)")
+        
+        // 增加重试计数
+        retryCount += 1
+        
+        // 简化的重试逻辑：只对-999错误和沙盒错误重试
+        let shouldRetry = (errorCode == NSURLErrorCancelled || 
+                          error.localizedDescription.contains("sandbox") ||
+                          error.localizedDescription.contains("extension")) && 
+                          retryCount <= 3
+        
+        if shouldRetry {
+            print("🔄 自动重试第\(retryCount)次...")
+            
+            let retryDelay = TimeInterval(retryCount) * 1.0 + 1.0
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + retryDelay) { [weak self] in
+                self?.loadHTMLTemplateIfNeeded()
+            }
+            
+            showDetailedLoadingState(
+                step: .loadingTemplate,
+                progress: 0.1,
+                detail: "正在重试第\(retryCount)次..."
+            )
         } else {
-            showError(message: "网页加载失败: \(error.localizedDescription)")
+            // 显示错误
+            let errorMessage = "加载失败: \(error.localizedDescription)\n请重试"
+            showError(message: errorMessage)
         }
     }
 }
