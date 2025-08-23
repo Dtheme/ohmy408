@@ -1,4 +1,0 @@
-module JXPhotoBrowser {
-header "JXPhotoBrowser-Swift.h"
-export *
-}

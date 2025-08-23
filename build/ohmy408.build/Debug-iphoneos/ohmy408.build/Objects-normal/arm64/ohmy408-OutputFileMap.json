@@ -25,37 +25,57 @@
     "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AppDelegate.swiftdeps",
     "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AppDelegate~partial.swiftmodule"
   },
-  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/CloudSyncManager.swift" : {
-    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.swiftconstvalues",
-    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.d",
-    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.dia",
-    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.o",
-    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.bc",
-    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.o",
-    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.swiftdeps",
-    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager~partial.swiftmodule"
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Core/AdvancedRenderingEngine.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedRenderingEngine.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedRenderingEngine.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedRenderingEngine.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedRenderingEngine.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedRenderingEngine.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedRenderingEngine.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedRenderingEngine.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedRenderingEngine~partial.swiftmodule"
   },
-  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/FileImportManager.swift" : {
-    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.swiftconstvalues",
-    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.d",
-    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.dia",
-    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.o",
-    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.bc",
-    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.o",
-    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.swiftdeps",
-    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager~partial.swiftmodule"
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Core/ContentComplexityAnalyzer.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ContentComplexityAnalyzer.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ContentComplexityAnalyzer.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ContentComplexityAnalyzer.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ContentComplexityAnalyzer.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ContentComplexityAnalyzer.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ContentComplexityAnalyzer.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ContentComplexityAnalyzer.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ContentComplexityAnalyzer~partial.swiftmodule"
   },
-  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/FileListViewController.swift" : {
-    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.swiftconstvalues",
-    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.d",
-    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.dia",
-    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.o",
-    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.bc",
-    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.o",
-    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.swiftdeps",
-    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController~partial.swiftmodule"
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Core/MarkdownPreprocessor.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownPreprocessor.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownPreprocessor.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownPreprocessor.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownPreprocessor.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownPreprocessor.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownPreprocessor.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownPreprocessor.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownPreprocessor~partial.swiftmodule"
   },
-  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/MarkdownFileManager.swift" : {
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Core/RenderingConfiguration.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingConfiguration.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingConfiguration.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingConfiguration.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingConfiguration.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingConfiguration.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingConfiguration.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingConfiguration.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingConfiguration~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Core/SmartChunker.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SmartChunker.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SmartChunker.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SmartChunker.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SmartChunker.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SmartChunker.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SmartChunker.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SmartChunker.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SmartChunker~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Managers/MarkdownFileManager.swift" : {
     "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownFileManager.swiftconstvalues",
     "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownFileManager.d",
     "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownFileManager.dia",
@@ -65,17 +85,27 @@
     "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownFileManager.swiftdeps",
     "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownFileManager~partial.swiftmodule"
   },
-  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/MarkdownReaderViewController.swift" : {
-    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.swiftconstvalues",
-    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.d",
-    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.dia",
-    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.o",
-    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.bc",
-    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.o",
-    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.swiftdeps",
-    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController~partial.swiftmodule"
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Managers/MemoryManager.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MemoryManager.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MemoryManager.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MemoryManager.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MemoryManager.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MemoryManager.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MemoryManager.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MemoryManager.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MemoryManager~partial.swiftmodule"
   },
-  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/RecentFileManager.swift" : {
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Managers/NativeImageViewer.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/NativeImageViewer.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/NativeImageViewer.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/NativeImageViewer.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/NativeImageViewer.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/NativeImageViewer.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/NativeImageViewer.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/NativeImageViewer.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/NativeImageViewer~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Managers/RecentFileManager.swift" : {
     "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RecentFileManager.swiftconstvalues",
     "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RecentFileManager.d",
     "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RecentFileManager.dia",
@@ -84,6 +114,26 @@
     "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RecentFileManager.o",
     "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RecentFileManager.swiftdeps",
     "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RecentFileManager~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Managers/ThemeManager.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Managers/ToastManager.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager~partial.swiftmodule"
   },
   "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/SceneDelegate.swift" : {
     "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SceneDelegate.swiftconstvalues",
@@ -95,7 +145,87 @@
     "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SceneDelegate.swiftdeps",
     "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SceneDelegate~partial.swiftmodule"
   },
-  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/SubjectSelectionViewController.swift" : {
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Services/AdvancedCacheService.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedCacheService.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedCacheService.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedCacheService.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedCacheService.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedCacheService.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedCacheService.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedCacheService.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/AdvancedCacheService~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Services/CloudSyncManager.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/CloudSyncManager~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Services/FileImportManager.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileImportManager~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Services/MarkdownCacheService.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownCacheService.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownCacheService.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownCacheService.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownCacheService.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownCacheService.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownCacheService.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownCacheService.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownCacheService~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Services/MarkdownRenderingService.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownRenderingService.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownRenderingService.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownRenderingService.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownRenderingService.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownRenderingService.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownRenderingService.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownRenderingService.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownRenderingService~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/Services/RenderingServiceIntegrator.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingServiceIntegrator.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingServiceIntegrator.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingServiceIntegrator.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingServiceIntegrator.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingServiceIntegrator.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingServiceIntegrator.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingServiceIntegrator.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/RenderingServiceIntegrator~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/ViewControllers/FileListViewController.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/FileListViewController~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/ViewControllers/MarkdownReaderViewController.swift" : {
+    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.swiftconstvalues",
+    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.d",
+    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.dia",
+    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.o",
+    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.bc",
+    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.o",
+    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController.swiftdeps",
+    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/MarkdownReaderViewController~partial.swiftmodule"
+  },
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/ViewControllers/SubjectSelectionViewController.swift" : {
     "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SubjectSelectionViewController.swiftconstvalues",
     "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SubjectSelectionViewController.d",
     "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SubjectSelectionViewController.dia",
@@ -105,27 +235,7 @@
     "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SubjectSelectionViewController.swiftdeps",
     "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/SubjectSelectionViewController~partial.swiftmodule"
   },
-  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/ThemeManager.swift" : {
-    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.swiftconstvalues",
-    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.d",
-    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.dia",
-    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.o",
-    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.bc",
-    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.o",
-    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager.swiftdeps",
-    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ThemeManager~partial.swiftmodule"
-  },
-  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/ToastManager.swift" : {
-    "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.swiftconstvalues",
-    "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.d",
-    "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.dia",
-    "index-unit-output-path" : "/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.o",
-    "llvm-bc" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.bc",
-    "object" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.o",
-    "swift-dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager.swiftdeps",
-    "swiftmodule" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/ToastManager~partial.swiftmodule"
-  },
-  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/XMindViewerViewController.swift" : {
+  "/Users/dzw/Desktop/GitHub/ohmy408-master/ohmy408/ViewControllers/XMindViewerViewController.swift" : {
     "const-values" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/XMindViewerViewController.swiftconstvalues",
     "dependencies" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/XMindViewerViewController.d",
     "diagnostics" : "/Users/dzw/Desktop/GitHub/ohmy408-master/build/ohmy408.build/Debug-iphoneos/ohmy408.build/Objects-normal/arm64/XMindViewerViewController.dia",

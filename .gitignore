@@ -48,6 +48,10 @@ playground.xcworkspace
 # Carthage/Checkouts
 
 Carthage/Build/
+*.superdesign
+*.md
+.cursor
+build/*
 
 # fastlane
 #

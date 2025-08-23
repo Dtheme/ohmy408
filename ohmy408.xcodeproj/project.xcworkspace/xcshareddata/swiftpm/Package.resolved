@@ -1,15 +1,6 @@
 {
-  "originHash" : "35cd4bc5b11671211cc43f542379a0b98bfcd18f31b2045c9e3a4649b4d22ee0",
+  "originHash" : "cce2e873c44ecb578bdbd7781220b48523361653dbe45c7f61226251f56cba43",
   "pins" : [
-    {
-      "identity" : "photobrowser",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/JiongXing/PhotoBrowser.git",
-      "state" : {
-        "revision" : "e3940567f29372640f8e491ab0d85e0e3a88f023",
-        "version" : "3.1.5"
-      }
-    },
     {
       "identity" : "snapkit",
       "kind" : "remoteSourceControl",
