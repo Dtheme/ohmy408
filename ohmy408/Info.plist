@@ -65,6 +65,8 @@
 		<false/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
 			<key>localhost</key>
@@ -76,6 +78,14 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>WKAppBoundDomains</key>
+	<array>
+		<string>localhost</string>
+	</array>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp.</string>
+	</array>
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>应用需要访问文档文件夹来管理和打开XMind文件</string>
 	<key>NSFileProviderDomainUsageDescription</key>

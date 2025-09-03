@@ -5287,78 +5287,109 @@ gantt
                 testImage.src = 'https://httpbin.org/image/png?_=' + Date.now();
             }
             
+            // === 快速深色模式保护函数 ===
+            function applyDarkModeProtection() {
+                console.time('🌙 深色模式保护');
+                
+                const isDarkMode = document.body.classList.contains('dark-mode') || 
+                                  document.documentElement.getAttribute('data-theme') === 'dark';
+                
+                if (isDarkMode) {
+                    console.log('🌙 检测到深色模式，应用样式保护');
+                    
+                    // 立即为所有现有元素应用深色样式
+                    const codeBlocks = document.querySelectorAll('pre, code');
+                    const copyButtons = document.querySelectorAll('.code-copy-btn');
+                    
+                    codeBlocks.forEach(block => {
+                        if (block.tagName === 'PRE') {
+                            block.style.background = '#1a1f2e';
+                            block.style.color = '#e2e8f0';
+                            block.style.borderColor = '#2d3748';
+                        } else if (block.tagName === 'CODE') {
+                            block.style.background = 'transparent';
+                            block.style.color = '#e2e8f0';
+                        }
+                    });
+                    
+                    copyButtons.forEach(button => {
+                        button.style.backgroundColor = '#2d3748';
+                        button.style.borderColor = '#4a5568';
+                        button.style.color = '#a0aec0';
+                    });
+                    
+                    // 批量优化文字对比度（使用DocumentFragment减少重排）
+                    const allTextElements = document.querySelectorAll('p, li, td, th, span, div:not(.code-copy-btn)');
+                    allTextElements.forEach(element => {
+                        if (element.style.color && element.style.color.includes('rgb')) {
+                            element.style.color = '#e2e8f0';
+                        }
+                    });
+                }
+                
+                console.timeEnd('🌙 深色模式保护');
+            }
+            
+            // === 快速启动优化 ===
             // 页面加载完成后初始化
             document.addEventListener('DOMContentLoaded', () => {
+                console.time('⚡️ 页面初始化总时间');
+                console.time('🚀 关键初始化时间');
+                
                 try {
-                    console.log('📱 页面加载完成，开始初始化');
+                    console.log('📱 页面加载完成，开始快速初始化');
                     
-                    // 立即应用深色模式保护 - 防止代码块白色闪动
-                    const isDarkMode = document.body.classList.contains('dark-mode') || 
-                                      document.documentElement.getAttribute('data-theme') === 'dark';
+                    // === 第一阶段：关键初始化（同步，必须立即完成）===
+                    // 1. 立即应用深色模式保护 - 防止闪动
+                    applyDarkModeProtection();
                     
-                    if (isDarkMode) {
-                        console.log('🌙 检测到深色模式，应用紧急样式保护');
-                        // 立即为所有现有元素应用深色样式
-                        const codeBlocks = document.querySelectorAll('pre, code');
-                        const copyButtons = document.querySelectorAll('.code-copy-btn');
-                        
-                        codeBlocks.forEach(block => {
-                            if (block.tagName === 'PRE') {
-                                block.style.background = '#1a1f2e';
-                                block.style.color = '#e2e8f0';
-                                block.style.borderColor = '#2d3748';
-                            } else if (block.tagName === 'CODE') {
-                                block.style.background = 'transparent';
-                                block.style.color = '#e2e8f0';
-                            }
-                        });
-                        
-                        copyButtons.forEach(button => {
-                            button.style.backgroundColor = '#2d3748';
-                            button.style.borderColor = '#4a5568';
-                            button.style.color = '#a0aec0';
-                        });
-                        
-                        // 同时优化所有文字对比度
-                        const allTextElements = document.querySelectorAll('p, li, td, th, span, div:not(.code-copy-btn)');
-                        allTextElements.forEach(element => {
-                            if (element.style.color && element.style.color.includes('rgb')) {
-                                // 提升现有颜色的亮度
-                                element.style.color = '#e2e8f0';
-                            }
-                        });
-                    }
-                    
-                    // 检测网络状态
-                    checkNetworkStatus();
-                    
-                    // 配置marked.js（如果可用）
+                    // 2. 配置marked.js（渲染必需）
                     configureMarked();
                     
-                    // 初始化目录功能
-                    initTOC();
+                    console.timeEnd('🚀 关键初始化时间');
                     
-                    // 初始化Mermaid
-                    initMermaid();
-                    
-                    // 检查viewport设置（移动端优化提醒）
-                    const viewport = document.querySelector('meta[name="viewport"]');
-                    if (!viewport || !viewport.content.includes('width=device-width')) {
-                        console.warn('⚠️ 建议添加viewport meta标签以优化移动端显示');
-                    }
-                    
-                    // 监听网络状态变化
-                    window.addEventListener('online', () => {
-                        console.log('🌐 网络已连接');
+                    // === 第二阶段：非关键初始化（异步，延迟加载）===
+                    requestAnimationFrame(() => {
+                        console.time('🔧 增强功能初始化');
+                        
+                        // 延迟初始化非关键功能
+                        setTimeout(() => {
+                            initTOC();
+                            checkNetworkStatus();
+                        }, 0);
+                        
+                        // 更晚初始化重资源功能
+                        setTimeout(() => {
+                            initMermaid();
+                            console.timeEnd('🔧 增强功能初始化');
+                            console.timeEnd('⚡️ 页面初始化总时间');
+                            console.log('🎉 所有功能初始化完成');
+                        }, 50);
+                        
+                        // 非阻塞的检查和监听器设置
+                        setTimeout(() => {
+                            // 检查viewport设置（移动端优化提醒）
+                            const viewport = document.querySelector('meta[name="viewport"]');
+                            if (!viewport || !viewport.content.includes('width=device-width')) {
+                                console.warn('⚠️ 建议添加viewport meta标签以优化移动端显示');
+                            }
+                            
+                            // 监听网络状态变化
+                            window.addEventListener('online', () => {
+                                console.log('🌐 网络已连接');
+                            });
+                            
+                            window.addEventListener('offline', () => {
+                                console.warn('🚫 网络已断开');
+                            });
+                        }, 100);
                     });
                     
-                    window.addEventListener('offline', () => {
-                        console.warn('🚫 网络已断开');
-                    });
-                    
-                    console.log('✅ 页面初始化完成');
+                    console.log('✅ 快速启动阶段完成');
                 } catch (error) {
-                    console.error('❌ 初始化错误:', error);
+                    console.error('❌ 快速启动失败:', error);
+                    console.timeEnd('🚀 关键初始化时间');
+                    console.timeEnd('⚡️ 页面初始化总时间');
                 }
             });
             

@@ -39,12 +39,18 @@ class MarkdownReaderViewController: UIViewController {
         // 允许JavaScript执行 - 兼容不同iOS版本
         if #available(iOS 14.0, *) {
             config.defaultWebpagePreferences.allowsContentJavaScript = true
+            // 设置更宽松的安全策略，避免沙盒权限问题
+            config.limitsNavigationsToAppBoundDomains = false
         } else {
             config.preferences.javaScriptEnabled = true
         }
         
         // 允许内联媒体播放
         config.allowsInlineMediaPlayback = true
+        
+        // 设置处理器优先级和内存配置
+        config.processPool = WKProcessPool()
+        config.suppressesIncrementalRendering = false
         
         // 添加消息处理器
         let userContentController = WKUserContentController()
@@ -56,6 +62,11 @@ class MarkdownReaderViewController: UIViewController {
         webView.scrollView.showsVerticalScrollIndicator = false
         webView.scrollView.showsHorizontalScrollIndicator = false
         webView.backgroundColor = .systemBackground
+        
+        // 避免沙盒权限问题的配置
+        webView.scrollView.contentInsetAdjustmentBehavior = .automatic
+        webView.allowsBackForwardNavigationGestures = false
+        webView.allowsLinkPreview = false
         
         // 初始透明状态，避免闪动
         webView.alpha = 0.0
@@ -88,11 +99,33 @@ class MarkdownReaderViewController: UIViewController {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        // 启动性能监控
+        let startTime = CFAbsoluteTimeGetCurrent()
+        print("🚀 MarkdownReaderViewController 启动开始 - \(Date())")
+        
         setupUI()
+        let uiTime = CFAbsoluteTimeGetCurrent()
+        print("📐 UI设置完成 - 耗时: \(String(format: "%.2f", (uiTime - startTime) * 1000))ms")
+        
         setupRenderingService()
+        let serviceTime = CFAbsoluteTimeGetCurrent()
+        print("🔧 渲染服务设置完成 - 耗时: \(String(format: "%.2f", (serviceTime - uiTime) * 1000))ms")
+        
         setupThemeManager()
+        let themeTime = CFAbsoluteTimeGetCurrent()
+        print("🎨 主题管理器设置完成 - 耗时: \(String(format: "%.2f", (themeTime - serviceTime) * 1000))ms")
+        
         setupGestureSupport()
+        let gestureTime = CFAbsoluteTimeGetCurrent()
+        print("👆 手势支持设置完成 - 耗时: \(String(format: "%.2f", (gestureTime - themeTime) * 1000))ms")
+        
         loadHTMLTemplate()
+        let templateTime = CFAbsoluteTimeGetCurrent()
+        print("📄 HTML模板加载完成 - 耗时: \(String(format: "%.2f", (templateTime - gestureTime) * 1000))ms")
+        
+        let totalTime = CFAbsoluteTimeGetCurrent()
+        print("⚡️ ViewDidLoad总耗时: \(String(format: "%.2f", (totalTime - startTime) * 1000))ms")
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -129,7 +162,10 @@ class MarkdownReaderViewController: UIViewController {
         
         // WebView约束
         webView.snp.makeConstraints { make in
-            make.edges.equalTo(view.safeAreaLayoutGuide)
+            make.left.equalTo(view.safeAreaLayoutGuide).offset(-1);
+            make.top.equalTo(view.safeAreaLayoutGuide).offset(-1);
+            make.right.equalTo(view.safeAreaLayoutGuide).offset(-1);
+            make.bottom.equalTo(view.safeAreaLayoutGuide).offset(-1);
         }
         
         // Loading indicator约束
@@ -441,8 +477,8 @@ class MarkdownReaderViewController: UIViewController {
         let bundleURL = Bundle.main.bundleURL
         print("Bundle路径: \(bundleURL)")
         
-        // 查找所有可能的HTML模板文件
-        let possibleNames = ["markdown_viewer_optimized", "markdown_viewer", "xmind_jsmind_viewer"]
+        // 查找所有可能的HTML模板文件 - 优先使用快速启动版
+        let possibleNames = ["markdown_viewer_fast", "markdown_viewer_debug", "markdown_viewer_optimized", "markdown_viewer", "xmind_jsmind_viewer"]
         for name in possibleNames {
             if let url = Bundle.main.url(forResource: name, withExtension: "html") {
                 print("找到HTML文件: \(name).html -> \(url)")
@@ -455,12 +491,22 @@ class MarkdownReaderViewController: UIViewController {
         var templateURL: URL?
         var usedTemplate = ""
         
-        // 优先尝试优化版
-        if let url = Bundle.main.url(forResource: "markdown_viewer_optimized", withExtension: "html") {
+        // 优先尝试快速启动版（性能优化版）
+        if let url = Bundle.main.url(forResource: "markdown_viewer_fast", withExtension: "html") {
+            templateURL = url
+            usedTemplate = "markdown_viewer_fast"
+        }
+        // 其次尝试调试版（轻量级，便于排查问题）
+        else if let url = Bundle.main.url(forResource: "markdown_viewer_debug", withExtension: "html") {
+            templateURL = url
+            usedTemplate = "markdown_viewer_debug"
+        }
+        // 再次尝试优化版
+        else if let url = Bundle.main.url(forResource: "markdown_viewer_optimized", withExtension: "html") {
             templateURL = url
             usedTemplate = "markdown_viewer_optimized"
         }
-        // 其次尝试原版
+        // 最后尝试原版
         else if let url = Bundle.main.url(forResource: "markdown_viewer", withExtension: "html") {
             templateURL = url
             usedTemplate = "markdown_viewer"
@@ -478,11 +524,76 @@ class MarkdownReaderViewController: UIViewController {
         do {
             let htmlString = try String(contentsOf: finalURL, encoding: .utf8)
             print("HTML模板加载成功，长度: \(htmlString.count)")
-            webView.loadHTMLString(htmlString, baseURL: finalURL)
+            
+            // 使用Bundle主目录作为baseURL，避免沙盒权限问题
+            let bundleURL = Bundle.main.bundleURL
+            print("使用Bundle URL作为baseURL: \(bundleURL)")
+            
+            // 加载HTML内容
+            webView.loadHTMLString(htmlString, baseURL: bundleURL)
+            
+            // 设置延迟检查，确保内容正确加载
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.verifyWebViewLoad()
+            }
+            
         } catch {
             let errorMsg = "加载HTML模板失败: \(error.localizedDescription)"
             print("错误: \(errorMsg)")
             showError(errorMsg)
+        }
+    }
+    
+    // MARK: - WebView验证和调试
+    private func verifyWebViewLoad() {
+        print("🔍 开始验证WebView加载状态")
+        
+        // 检查WebView基本状态
+        print("WebView isLoading: \(webView.isLoading)")
+        print("WebView URL: \(webView.url?.absoluteString ?? "nil")")
+        print("WebView canGoBack: \(webView.canGoBack)")
+        print("WebView canGoForward: \(webView.canGoForward)")
+        
+        // 检查JavaScript执行环境
+        webView.evaluateJavaScript("document.readyState") { [weak self] result, error in
+            if let error = error {
+                print("❌ JavaScript执行环境检查失败: \(error)")
+                self?.showError("网页内容加载异常: \(error.localizedDescription)")
+            } else if let state = result as? String {
+                print("✅ Document readyState: \(state)")
+                
+                if state == "complete" {
+                    // 检查关键函数是否存在
+                    self?.checkCriticalFunctions()
+                } else {
+                    print("⏳ 文档还在加载中，等待完成...")
+                    // 延迟再次检查
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self?.verifyWebViewLoad()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func checkCriticalFunctions() {
+        print("🔧 检查关键JavaScript函数")
+        
+        let functionsToCheck = [
+            "typeof window.renderMarkdown",
+            "typeof window.nativePrint", 
+            "typeof document.getElementById",
+            "document.getElementById('rendered-content') !== null"
+        ]
+        
+        for (index, jsCode) in functionsToCheck.enumerated() {
+            webView.evaluateJavaScript(jsCode) { result, error in
+                if let error = error {
+                    print("❌ 函数检查失败 [\(index)]: \(error)")
+                } else {
+                    print("✅ 函数检查通过 [\(index)]: \(result ?? "nil")")
+                }
+            }
         }
     }
     
